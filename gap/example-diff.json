@@ -1,0 +1,667 @@
+{
+  "version": 1,
+  "org": "acme-commerce",
+  "baseline": {
+    "stats_period": "30d",
+    "traces_sample_rate": 0.25
+  },
+  "current": {
+    "stats_period": "30d",
+    "traces_sample_rate": 0.25
+  },
+  "comparability_warnings": [],
+  "summary": {
+    "resolved": 8,
+    "regressed": 1,
+    "coverage_improved": 0,
+    "coverage_regressed": 0,
+    "journeys_added": 0,
+    "journeys_dropped": 0
+  },
+  "journeys": [
+    {
+      "id": "checkout",
+      "name": "Checkout",
+      "score_before": 53.3,
+      "score_after": 92.1,
+      "score_delta": 38.8,
+      "grade_before": "needs improvement",
+      "grade_after": "excellent",
+      "coverage_before": "partial",
+      "coverage_after": "partial",
+      "coverage_direction": "unchanged",
+      "steps_before": 5,
+      "steps_after": 6,
+      "steps_total": 7,
+      "headline": "1 regression(s)",
+      "resolved": [
+        {
+          "rule": "CE-002",
+          "entity": "checkout.confirmation_viewed",
+          "description": "Terminal outcome-bearing span present",
+          "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+          "impact": "critical",
+          "detail_before": "expected span `checkout.confirmation_viewed` \u2014 not found",
+          "detail_after": "expected span `checkout.confirmation_viewed` \u2014 40,560 observed"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "checkout.payment.authorize",
+          "description": "Step 4 `payment_authorized` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "critical",
+          "detail_before": "expected span `checkout.payment.authorize` \u2014 not found",
+          "detail_after": "expected span `checkout.payment.authorize` \u2014 46,810 observed"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "checkout.confirmation_viewed",
+          "description": "Step 7 `confirmation_viewed` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "important",
+          "detail_before": "expected span `checkout.confirmation_viewed` \u2014 not found",
+          "detail_after": "expected span `checkout.confirmation_viewed` \u2014 40,560 observed"
+        },
+        {
+          "rule": "CE-007",
+          "entity": "checkout.outcome",
+          "description": "Outcome is a string enum, not a boolean",
+          "rationale": "Sentry renders boolean attributes as the strings 'true'/'false', and a binary collapses failed, abandoned, and rejected into one bucket. Those three route to three different teams.",
+          "impact": "important",
+          "detail_before": "`checkout.outcome` is type `boolean`",
+          "detail_after": "`checkout.outcome` present (type `string`, source `user`)"
+        },
+        {
+          "rule": "CE-008",
+          "entity": "payment.decline_reason",
+          "description": "Failure reason present (outcome admits failure)",
+          "rationale": "Without a coded reason every failure collapses into one undiagnosable bucket. Usually the highest-value attribute for the customer, because it is the one that routes a problem to an owning team.",
+          "impact": "important",
+          "detail_before": "`payment.decline_reason` not found in the org's span attributes",
+          "detail_after": "`payment.decline_reason` present (type `string`, source `user`)"
+        },
+        {
+          "rule": "CE-009",
+          "entity": "order.value",
+          "description": "Magnitude `order.value` present",
+          "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+          "impact": "important",
+          "detail_before": "`order.value` not found in the org's span attributes",
+          "detail_after": "`order.value` present (type `number`, source `user`)"
+        },
+        {
+          "rule": "CE-010",
+          "entity": "cart.value",
+          "description": "Magnitude `cart.value` is numeric",
+          "rationale": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+          "impact": "important",
+          "detail_before": "`cart.value` is type `string`, expected `number`",
+          "detail_after": "`cart.value` present (type `number`, source `user`)"
+        },
+        {
+          "rule": "CE-013",
+          "entity": null,
+          "description": "No span name drift",
+          "rationale": "A near-miss name produces no error, no failing test, and no data \u2014 the team believes the step is instrumented while every query returns empty. Reported apart from 'missing' because the fix is a rename, not new instrumentation.",
+          "impact": "normal",
+          "detail_before": "expected `checkout.payment.authorize`, found `checkout.payment_authorize`",
+          "detail_after": "none detected"
+        }
+      ],
+      "regressed": [
+        {
+          "rule": "CE-003",
+          "entity": "checkout.shipping_submitted",
+          "description": "Step 2 `shipping_submitted` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `checkout.shipping_submitted` \u2014 46,900 observed",
+          "detail_after": "expected span `checkout.shipping_submitted` \u2014 not found"
+        }
+      ],
+      "still_failing": [
+        {
+          "rule": "CE-012",
+          "entity": null,
+          "description": "No dark segment between instrumented steps",
+          "rationale": "A gap in the middle is worse than a gap at the end: latency and drop-off from the dark steps are silently attributed to the last instrumented step. This is the finding that produces the 'visible to payment, then goes dark' sentence.",
+          "impact": "important",
+          "detail_before": "payment_authorized",
+          "detail_after": "shipping_submitted"
+        }
+      ],
+      "newly_measured": [
+        "CE-010 (order.value)"
+      ],
+      "no_longer_measured": [],
+      "dark_segments_before": [
+        [
+          "payment_authorized"
+        ]
+      ],
+      "dark_segments_after": [
+        [
+          "shipping_submitted"
+        ]
+      ]
+    },
+    {
+      "id": "health_probe",
+      "name": "Health Probe",
+      "score_before": 16.7,
+      "score_after": 16.7,
+      "score_delta": 0.0,
+      "grade_before": "poor",
+      "grade_after": "poor",
+      "coverage_before": "absent",
+      "coverage_after": "absent",
+      "coverage_direction": "unchanged",
+      "steps_before": 0,
+      "steps_after": 0,
+      "steps_total": 2,
+      "headline": "no change",
+      "resolved": [],
+      "regressed": [],
+      "still_failing": [
+        {
+          "rule": "CE-001",
+          "entity": "health_probe",
+          "description": "Journey root span present",
+          "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+          "impact": "critical",
+          "detail_before": "expected span `health_probe` \u2014 not found",
+          "detail_after": "expected span `health_probe` \u2014 not found"
+        },
+        {
+          "rule": "CE-002",
+          "entity": "health_probe.deps_checked",
+          "description": "Terminal outcome-bearing span present",
+          "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+          "impact": "critical",
+          "detail_before": "expected span `health_probe.deps_checked` \u2014 not found",
+          "detail_after": "expected span `health_probe.deps_checked` \u2014 not found"
+        },
+        {
+          "rule": "CE-004",
+          "entity": null,
+          "description": "Correlation key attribute present",
+          "rationale": "The correlation key stitches steps into one journey instance. A browser navigation starts a new Sentry trace, so the trace ID cannot do this job. Without the key you have disconnected spans, not a journey.",
+          "impact": "critical",
+          "detail_before": "not declared in the journey definition",
+          "detail_after": "not declared in the journey definition"
+        },
+        {
+          "rule": "CE-006",
+          "entity": null,
+          "description": "Outcome attribute present",
+          "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+          "impact": "critical",
+          "detail_before": "not declared in the journey definition",
+          "detail_after": "not declared in the journey definition"
+        },
+        {
+          "rule": "CE-009",
+          "entity": null,
+          "description": "Magnitude present",
+          "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+          "impact": "important",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "health_probe",
+          "description": "Step 1 `probe_received` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `health_probe` \u2014 not found",
+          "detail_after": "expected span `health_probe` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "health_probe.deps_checked",
+          "description": "Step 2 `deps_checked` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `health_probe.deps_checked` \u2014 not found",
+          "detail_after": "expected span `health_probe.deps_checked` \u2014 not found"
+        },
+        {
+          "rule": "CE-011",
+          "entity": null,
+          "description": "Actor segment present",
+          "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+          "impact": "normal",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        }
+      ],
+      "newly_measured": [],
+      "no_longer_measured": [],
+      "dark_segments_before": [],
+      "dark_segments_after": []
+    },
+    {
+      "id": "password_reset",
+      "name": "Password Reset",
+      "score_before": 15.6,
+      "score_after": 15.6,
+      "score_delta": 0.0,
+      "grade_before": "poor",
+      "grade_after": "poor",
+      "coverage_before": "absent",
+      "coverage_after": "absent",
+      "coverage_direction": "unchanged",
+      "steps_before": 0,
+      "steps_after": 0,
+      "steps_total": 3,
+      "headline": "no change",
+      "resolved": [],
+      "regressed": [],
+      "still_failing": [
+        {
+          "rule": "CE-001",
+          "entity": "password_reset",
+          "description": "Journey root span present",
+          "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+          "impact": "critical",
+          "detail_before": "expected span `password_reset` \u2014 not found",
+          "detail_after": "expected span `password_reset` \u2014 not found"
+        },
+        {
+          "rule": "CE-002",
+          "entity": "password_reset.password_changed",
+          "description": "Terminal outcome-bearing span present",
+          "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+          "impact": "critical",
+          "detail_before": "expected span `password_reset.password_changed` \u2014 not found",
+          "detail_after": "expected span `password_reset.password_changed` \u2014 not found"
+        },
+        {
+          "rule": "CE-004",
+          "entity": null,
+          "description": "Correlation key attribute present",
+          "rationale": "The correlation key stitches steps into one journey instance. A browser navigation starts a new Sentry trace, so the trace ID cannot do this job. Without the key you have disconnected spans, not a journey.",
+          "impact": "critical",
+          "detail_before": "not declared in the journey definition",
+          "detail_after": "not declared in the journey definition"
+        },
+        {
+          "rule": "CE-006",
+          "entity": null,
+          "description": "Outcome attribute present",
+          "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+          "impact": "critical",
+          "detail_before": "not declared in the journey definition",
+          "detail_after": "not declared in the journey definition"
+        },
+        {
+          "rule": "CE-009",
+          "entity": null,
+          "description": "Magnitude present",
+          "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+          "impact": "important",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "password_reset",
+          "description": "Step 1 `reset_requested` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `password_reset` \u2014 not found",
+          "detail_after": "expected span `password_reset` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "password_reset.email_sent",
+          "description": "Step 2 `email_sent` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `password_reset.email_sent` \u2014 not found",
+          "detail_after": "expected span `password_reset.email_sent` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "password_reset.password_changed",
+          "description": "Step 3 `password_changed` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `password_reset.password_changed` \u2014 not found",
+          "detail_after": "expected span `password_reset.password_changed` \u2014 not found"
+        },
+        {
+          "rule": "CE-011",
+          "entity": null,
+          "description": "Actor segment present",
+          "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+          "impact": "normal",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        }
+      ],
+      "newly_measured": [],
+      "no_longer_measured": [],
+      "dark_segments_before": [],
+      "dark_segments_after": []
+    },
+    {
+      "id": "plan_downgrade",
+      "name": "Plan Downgrade",
+      "score_before": 15.6,
+      "score_after": 15.6,
+      "score_delta": 0.0,
+      "grade_before": "poor",
+      "grade_after": "poor",
+      "coverage_before": "absent",
+      "coverage_after": "absent",
+      "coverage_direction": "unchanged",
+      "steps_before": 0,
+      "steps_after": 0,
+      "steps_total": 3,
+      "headline": "no change",
+      "resolved": [],
+      "regressed": [],
+      "still_failing": [
+        {
+          "rule": "CE-001",
+          "entity": "plan_downgrade",
+          "description": "Journey root span present",
+          "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+          "impact": "critical",
+          "detail_before": "expected span `plan_downgrade` \u2014 not found",
+          "detail_after": "expected span `plan_downgrade` \u2014 not found"
+        },
+        {
+          "rule": "CE-002",
+          "entity": "plan_downgrade.entitlement_revoked",
+          "description": "Terminal outcome-bearing span present",
+          "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+          "impact": "critical",
+          "detail_before": "expected span `plan_downgrade.entitlement_revoked` \u2014 not found",
+          "detail_after": "expected span `plan_downgrade.entitlement_revoked` \u2014 not found"
+        },
+        {
+          "rule": "CE-004",
+          "entity": "subscription.id",
+          "description": "Correlation key attribute present",
+          "rationale": "The correlation key stitches steps into one journey instance. A browser navigation starts a new Sentry trace, so the trace ID cannot do this job. Without the key you have disconnected spans, not a journey.",
+          "impact": "critical",
+          "detail_before": "`subscription.id` not found in the org's span attributes",
+          "detail_after": "`subscription.id` not found in the org's span attributes"
+        },
+        {
+          "rule": "CE-006",
+          "entity": null,
+          "description": "Outcome attribute present",
+          "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+          "impact": "critical",
+          "detail_before": "not declared in the journey definition",
+          "detail_after": "not declared in the journey definition"
+        },
+        {
+          "rule": "CE-009",
+          "entity": null,
+          "description": "Magnitude present",
+          "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+          "impact": "important",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "plan_downgrade",
+          "description": "Step 1 `downgrade_requested` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `plan_downgrade` \u2014 not found",
+          "detail_after": "expected span `plan_downgrade` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "plan_downgrade.proration_calculated",
+          "description": "Step 2 `proration_calculated` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `plan_downgrade.proration_calculated` \u2014 not found",
+          "detail_after": "expected span `plan_downgrade.proration_calculated` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "plan_downgrade.entitlement_revoked",
+          "description": "Step 3 `entitlement_revoked` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `plan_downgrade.entitlement_revoked` \u2014 not found",
+          "detail_after": "expected span `plan_downgrade.entitlement_revoked` \u2014 not found"
+        },
+        {
+          "rule": "CE-011",
+          "entity": null,
+          "description": "Actor segment present",
+          "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+          "impact": "normal",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        }
+      ],
+      "newly_measured": [],
+      "no_longer_measured": [],
+      "dark_segments_before": [],
+      "dark_segments_after": []
+    },
+    {
+      "id": "refund_request",
+      "name": "Refund Request",
+      "score_before": 15.6,
+      "score_after": 15.6,
+      "score_delta": 0.0,
+      "grade_before": "poor",
+      "grade_after": "poor",
+      "coverage_before": "absent",
+      "coverage_after": "absent",
+      "coverage_direction": "unchanged",
+      "steps_before": 0,
+      "steps_after": 0,
+      "steps_total": 3,
+      "headline": "no change",
+      "resolved": [],
+      "regressed": [],
+      "still_failing": [
+        {
+          "rule": "CE-001",
+          "entity": "refund_request",
+          "description": "Journey root span present",
+          "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+          "impact": "critical",
+          "detail_before": "expected span `refund_request` \u2014 not found",
+          "detail_after": "expected span `refund_request` \u2014 not found"
+        },
+        {
+          "rule": "CE-002",
+          "entity": "refund_request.refund_settled",
+          "description": "Terminal outcome-bearing span present",
+          "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+          "impact": "critical",
+          "detail_before": "expected span `refund_request.refund_settled` \u2014 not found",
+          "detail_after": "expected span `refund_request.refund_settled` \u2014 not found"
+        },
+        {
+          "rule": "CE-004",
+          "entity": "refund.id",
+          "description": "Correlation key attribute present",
+          "rationale": "The correlation key stitches steps into one journey instance. A browser navigation starts a new Sentry trace, so the trace ID cannot do this job. Without the key you have disconnected spans, not a journey.",
+          "impact": "critical",
+          "detail_before": "`refund.id` not found in the org's span attributes",
+          "detail_after": "`refund.id` not found in the org's span attributes"
+        },
+        {
+          "rule": "CE-006",
+          "entity": null,
+          "description": "Outcome attribute present",
+          "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+          "impact": "critical",
+          "detail_before": "not declared in the journey definition",
+          "detail_after": "not declared in the journey definition"
+        },
+        {
+          "rule": "CE-009",
+          "entity": null,
+          "description": "Magnitude present",
+          "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+          "impact": "important",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "refund_request",
+          "description": "Step 1 `refund_requested` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `refund_request` \u2014 not found",
+          "detail_after": "expected span `refund_request` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "refund_request.refund_approved",
+          "description": "Step 2 `refund_approved` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `refund_request.refund_approved` \u2014 not found",
+          "detail_after": "expected span `refund_request.refund_approved` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "refund_request.refund_settled",
+          "description": "Step 3 `refund_settled` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `refund_request.refund_settled` \u2014 not found",
+          "detail_after": "expected span `refund_request.refund_settled` \u2014 not found"
+        },
+        {
+          "rule": "CE-011",
+          "entity": null,
+          "description": "Actor segment present",
+          "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+          "impact": "normal",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        }
+      ],
+      "newly_measured": [],
+      "no_longer_measured": [],
+      "dark_segments_before": [],
+      "dark_segments_after": []
+    },
+    {
+      "id": "subscription_upgrade",
+      "name": "Subscription Upgrade",
+      "score_before": 27.8,
+      "score_after": 27.8,
+      "score_delta": 0.0,
+      "grade_before": "poor",
+      "grade_after": "poor",
+      "coverage_before": "absent",
+      "coverage_after": "absent",
+      "coverage_direction": "unchanged",
+      "steps_before": 0,
+      "steps_after": 0,
+      "steps_total": 3,
+      "headline": "no change",
+      "resolved": [],
+      "regressed": [],
+      "still_failing": [
+        {
+          "rule": "CE-001",
+          "entity": "subscription_upgrade",
+          "description": "Journey root span present",
+          "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+          "impact": "critical",
+          "detail_before": "expected span `subscription_upgrade` \u2014 not found",
+          "detail_after": "expected span `subscription_upgrade` \u2014 not found"
+        },
+        {
+          "rule": "CE-002",
+          "entity": "subscription_upgrade.entitlement_granted",
+          "description": "Terminal outcome-bearing span present",
+          "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+          "impact": "critical",
+          "detail_before": "expected span `subscription_upgrade.entitlement_granted` \u2014 not found",
+          "detail_after": "expected span `subscription_upgrade.entitlement_granted` \u2014 not found"
+        },
+        {
+          "rule": "CE-006",
+          "entity": "upgrade.outcome",
+          "description": "Outcome attribute present",
+          "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+          "impact": "critical",
+          "detail_before": "`upgrade.outcome` not found in the org's span attributes",
+          "detail_after": "`upgrade.outcome` not found in the org's span attributes"
+        },
+        {
+          "rule": "CE-008",
+          "entity": null,
+          "description": "Failure reason present (outcome admits failure)",
+          "rationale": "Without a coded reason every failure collapses into one undiagnosable bucket. Usually the highest-value attribute for the customer, because it is the one that routes a problem to an owning team.",
+          "impact": "important",
+          "detail_before": "not declared in the journey definition",
+          "detail_after": "not declared in the journey definition"
+        },
+        {
+          "rule": "CE-009",
+          "entity": null,
+          "description": "Magnitude present",
+          "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+          "impact": "important",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "subscription_upgrade",
+          "description": "Step 1 `plan_selected` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `subscription_upgrade` \u2014 not found",
+          "detail_after": "expected span `subscription_upgrade` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "subscription_upgrade.payment_authorized",
+          "description": "Step 2 `payment_authorized` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `subscription_upgrade.payment_authorized` \u2014 not found",
+          "detail_after": "expected span `subscription_upgrade.payment_authorized` \u2014 not found"
+        },
+        {
+          "rule": "CE-003",
+          "entity": "subscription_upgrade.entitlement_granted",
+          "description": "Step 3 `entitlement_granted` instrumented",
+          "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+          "impact": "normal",
+          "detail_before": "expected span `subscription_upgrade.entitlement_granted` \u2014 not found",
+          "detail_after": "expected span `subscription_upgrade.entitlement_granted` \u2014 not found"
+        },
+        {
+          "rule": "CE-011",
+          "entity": null,
+          "description": "Actor segment present",
+          "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+          "impact": "normal",
+          "detail_before": "none declared",
+          "detail_after": "none declared"
+        }
+      ],
+      "newly_measured": [],
+      "no_longer_measured": [],
+      "dark_segments_before": [],
+      "dark_segments_after": []
+    }
+  ],
+  "journeys_added": [],
+  "journeys_dropped": []
+}

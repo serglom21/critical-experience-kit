@@ -1,0 +1,278 @@
+# Span tree for the Checkout critical experience.
+#
+# STATUS: generated EXEMPLAR, not a catalog entry. This file instantiates the
+# seven roles in GRAMMAR.md for one customer's checkout:
+#   correlation key -> checkout.id      step marker   -> checkout.step
+#   outcome         -> checkout.outcome failure reason-> checkout.failure_stage
+#   magnitude       -> cart.value / order.value
+# Do NOT treat it as "the" canonical checkout journey. Heap measured 84% of
+# funnel analyses as misleading and 63% as missing an alternative path to
+# conversion — a hand-authored canonical journey is usually wrong. Regenerate
+# per customer from their declared journeys (and optionally from discovery).
+#
+# Verified syntax notes:
+#   - Span groups REQUIRE `span_kind`: client | server | producer | consumer | internal
+#   - `stability` is required on span groups.
+#   - `ref:` MUST point at an existing attribute id. When `ref` is set, `id`,
+#     `type`, `stability`, and `deprecation` MUST NOT be present.
+#     Overridable on a ref: brief, note, examples, requirement_level,
+#     sampling_relevant, tag.
+#   - `requirement_level`: required | conditionally_required <cond> | recommended | opt_in
+#     The conditional forms are YAML MAPS, not strings.
+#
+# IMPORTANT LIMITATION: `requirement_level: required` on a span group is
+# DOCUMENTATION ONLY. `weaver registry live-check` is sample-driven and has no
+# span lookup — it will never report a missing span or a missing span attribute.
+# Journey completeness is enforced by the Sentry-side coverage checker.
+# See BUILD-PLAN.md §0, Finding 1.
+#
+# The `journey_*` fields below are NOT weaver fields. They live in `note` text
+# so they survive `registry check` while still being machine-parseable by the
+# spec generator and coverage checker. Do not promote them to top-level keys.
+
+groups:
+  # ===========================================================================
+  # STEP 1 — Browser. Journey root.
+  # ===========================================================================
+  - id: span.checkout.start
+    type: span
+    span_kind: internal
+    stability: development
+    brief: >
+      Root span of the checkout journey, opened in the browser when the customer
+      enters checkout.
+    note: |
+      journey: checkout
+      journey_step: 1
+      journey_role: root
+      surface: browser
+      sentry_op: ui.action
+      sentry_span_name: "checkout"
+      impact: Critical
+      rationale: >
+        Without this span there is no journey to attach outcomes to, and no
+        funnel is queryable. Absence of this span caps the journey grade.
+    attributes:
+      - ref: checkout.id
+        requirement_level: required
+      - ref: checkout.step
+        requirement_level: required
+        note: MUST be `cart_reviewed` on this span.
+      - ref: cart.value
+        requirement_level: required
+      - ref: cart.item_count
+        requirement_level: required
+      - ref: cart.currency
+        requirement_level: required
+      - ref: checkout.entry_point
+        requirement_level: recommended
+      - ref: checkout.outcome
+        requirement_level:
+          conditionally_required: >
+            Required before this span ends. Set to `abandoned` by default and
+            overwrite on a terminal event, so an abandoned journey is
+            distinguishable from an uninstrumented one.
+      - ref: checkout.failure_stage
+        requirement_level:
+          conditionally_required: If `checkout.outcome` is not `completed`.
+      - ref: order.id
+        requirement_level:
+          conditionally_required: If `checkout.outcome` is `completed`.
+      - ref: order.value
+        requirement_level:
+          conditionally_required: If `checkout.outcome` is `completed`.
+
+  # ===========================================================================
+  # STEP 2 — Browser.
+  # ===========================================================================
+  - id: span.checkout.shipping_submitted
+    type: span
+    span_kind: internal
+    stability: development
+    brief: Customer submitted shipping details.
+    note: |
+      journey: checkout
+      journey_step: 2
+      journey_role: step
+      surface: browser
+      sentry_op: ui.action.click
+      sentry_span_name: "checkout.shipping_submitted"
+      impact: Normal
+      rationale: >
+        Isolates shipping-form friction, which is a common silent drop-off
+        point and is invisible in HTTP-level instrumentation.
+    attributes:
+      - ref: checkout.id
+        requirement_level: required
+      - ref: checkout.step
+        requirement_level: required
+        note: MUST be `shipping_submitted`.
+
+  # ===========================================================================
+  # STEP 3 — Browser. Hand-off to the backend.
+  # ===========================================================================
+  - id: span.checkout.payment_submitted
+    type: span
+    span_kind: internal
+    stability: development
+    brief: >
+      Customer submitted payment details. This span's child HTTP request is the
+      trace hand-off point from browser to backend.
+    note: |
+      journey: checkout
+      journey_step: 3
+      journey_role: step
+      surface: browser
+      sentry_op: ui.action.click
+      sentry_span_name: "checkout.payment_submitted"
+      impact: Important
+      rationale: >
+        This is where perceived latency and real latency diverge most, and it is
+        the boundary where distributed tracing most often breaks. A journey that
+        goes dark here loses all attribution for payment failures.
+    attributes:
+      - ref: checkout.id
+        requirement_level: required
+      - ref: checkout.step
+        requirement_level: required
+        note: MUST be `payment_submitted`.
+      - ref: payment.method
+        requirement_level: required
+
+  # ===========================================================================
+  # STEP 4 — Node. Payment authorization.
+  # ===========================================================================
+  - id: span.checkout.payment.authorize
+    type: span
+    span_kind: client
+    stability: development
+    brief: >
+      Server-side payment authorization call to the payment provider.
+    note: |
+      journey: checkout
+      journey_step: 4
+      journey_role: step
+      surface: node
+      sentry_op: function
+      sentry_span_name: "checkout.payment.authorize"
+      impact: Critical
+      rationale: >
+        The highest-value span in the journey. Auto-instrumentation produces an
+        `http.client` span here with a status code, but cannot know the payment
+        method, the provider's coded decline reason, or that this call is the
+        revenue-critical leg of a checkout. Those require manual attributes.
+    attributes:
+      - ref: checkout.id
+        requirement_level: required
+      - ref: checkout.step
+        requirement_level: required
+        note: MUST be `payment_authorized`.
+      - ref: payment.method
+        requirement_level: required
+      - ref: payment.provider
+        requirement_level: required
+      - ref: payment.outcome
+        requirement_level: required
+      - ref: payment.decline_reason
+        requirement_level:
+          conditionally_required: If `payment.outcome` is `declined` or `error`.
+      - ref: cart.value
+        requirement_level: recommended
+        note: >
+          Enables revenue-at-risk queries such as
+          `sum(cart.value)` grouped by `payment.decline_reason`.
+      - ref: server.address
+        requirement_level: recommended
+
+  # ===========================================================================
+  # STEP 5 — Node. Inventory reservation.
+  # ===========================================================================
+  - id: span.checkout.inventory.reserve
+    type: span
+    span_kind: internal
+    stability: development
+    brief: Server-side inventory reservation for the cart contents.
+    note: |
+      journey: checkout
+      journey_step: 5
+      journey_role: step
+      surface: node
+      sentry_op: function
+      sentry_span_name: "checkout.inventory.reserve"
+      impact: Important
+      rationale: >
+        Distinguishes "we declined the customer" from "we could not fulfil the
+        order" — a distinction invisible in a 500-level status code and one that
+        routes to a completely different owning team.
+    attributes:
+      - ref: checkout.id
+        requirement_level: required
+      - ref: inventory.outcome
+        requirement_level: required
+      - ref: cart.item_count
+        requirement_level: recommended
+
+  # ===========================================================================
+  # STEP 6 — Node. Order creation.
+  # ===========================================================================
+  - id: span.checkout.order.create
+    type: span
+    span_kind: internal
+    stability: development
+    brief: Server-side persistence of the confirmed order.
+    note: |
+      journey: checkout
+      journey_step: 6
+      journey_role: step
+      surface: node
+      sentry_op: function
+      sentry_span_name: "checkout.order.create"
+      impact: Critical
+      rationale: >
+        The commit point of the journey. Without it, a payment authorized but
+        never converted into an order is indistinguishable from a success —
+        the most expensive possible blind spot in the funnel.
+    attributes:
+      - ref: checkout.id
+        requirement_level: required
+      - ref: checkout.step
+        requirement_level: required
+        note: MUST be `order_created`.
+      - ref: order.id
+        requirement_level: required
+      - ref: order.value
+        requirement_level: required
+      - ref: cart.currency
+        requirement_level: required
+
+  # ===========================================================================
+  # STEP 7 — Browser. Terminal.
+  # ===========================================================================
+  - id: span.checkout.confirmation_viewed
+    type: span
+    span_kind: internal
+    stability: development
+    brief: >
+      Customer saw the order confirmation. Terminal step; closes the journey.
+    note: |
+      journey: checkout
+      journey_step: 7
+      journey_role: terminal
+      surface: browser
+      sentry_op: ui.action
+      sentry_span_name: "checkout.confirmation_viewed"
+      impact: Important
+      rationale: >
+        Separates "the order succeeded" from "the customer knows the order
+        succeeded." Orders that commit but never render a confirmation generate
+        support tickets and duplicate purchases, and are invisible server-side.
+    attributes:
+      - ref: checkout.id
+        requirement_level: required
+      - ref: checkout.step
+        requirement_level: required
+        note: MUST be `confirmation_viewed`.
+      - ref: order.id
+        requirement_level: required
+      - ref: order.value
+        requirement_level: recommended

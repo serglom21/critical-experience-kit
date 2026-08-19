@@ -1,0 +1,8 @@
+{
+  "name": "ce-runtime-checkout",
+  "private": true,
+  "type": "module",
+  "description": "Runtime eval fixture: emits the checkout journey through a real @sentry/node SDK.",
+  "scripts": { "drive": "node drive.mjs" },
+  "dependencies": { "@sentry/node": "^10" }
+}

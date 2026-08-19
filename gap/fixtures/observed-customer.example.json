@@ -1,0 +1,63 @@
+{
+  "org": "acme-commerce",
+  "dataset": "spans",
+  "stats_period": "30d",
+  "traces_sample_rate": 0.25,
+  "_comment": [
+    "Offline fixture standing in for a real org snapshot, so the analyzer is",
+    "testable with no credentials. Shaped to exercise the findings that actually",
+    "show up in the field:",
+    "",
+    "  - a mid-funnel dark segment (payment_authorized absent)",
+    "  - which is really NAME DRIFT: 'checkout.payment_authorize' IS being sent",
+    "    43,800 times, while the spec binds the step to 'checkout.payment.authorize'.",
+    "    One rename away from working. No error, no failing test, no data.",
+    "  - a boolean outcome, so failed/abandoned/rejected collapse into one bucket",
+    "  - cart.value sent as a STRING, so sum() and p50() silently return nothing",
+    "  - no terminal confirmation span, which caps the grade",
+    "  - a declared journey (subscription_upgrade) with the correlation key present",
+    "    but no journey spans at all",
+    "",
+    "attributeSource.source_type is the real field from",
+    "GET /trace-items/attributes/ — `user` means customer-defined, `sentry` means",
+    "the SDK provided it."
+  ],
+  "span_names": [
+    { "name": "checkout", "count": 48210 },
+    { "name": "checkout.shipping_submitted", "count": 46900 },
+    { "name": "checkout.payment_submitted", "count": 44100 },
+    { "name": "checkout.payment_authorize", "count": 43800 },
+    { "name": "checkout.inventory.reserve", "count": 41050 },
+    { "name": "checkout.order.create", "count": 38200 },
+    { "name": "http.server", "count": 9120000 },
+    { "name": "http.client", "count": 1842890 },
+    { "name": "db.query", "count": 4210500 },
+    { "name": "resource.img", "count": 905899 },
+    { "name": "ui.react.mount", "count": 23062785 }
+  ],
+  "attributes": [
+    { "key": "checkout.id", "name": "checkout.id", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "checkout.step", "name": "checkout.step", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "checkout.outcome", "name": "checkout.outcome", "attributeType": "boolean", "attributeSource": { "source_type": "user" } },
+    { "key": "cart.value", "name": "cart.value", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "cart.item_count", "name": "cart.item_count", "attributeType": "number", "attributeSource": { "source_type": "user" } },
+    { "key": "cart.currency", "name": "cart.currency", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "payment.method", "name": "payment.method", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "user.plan_tier", "name": "user.plan_tier", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "upgrade.id", "name": "upgrade.id", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "http.request.method", "name": "http.request.method", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "http.response.status_code", "name": "http.response.status_code", "attributeType": "number", "attributeSource": { "source_type": "sentry" } },
+    { "key": "server.address", "name": "server.address", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "db.system", "name": "db.system", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "span.description", "name": "span.description", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "user.id", "name": "user.id", "attributeType": "string", "attributeSource": { "source_type": "sentry" } }
+  ],
+  "example_traces": {
+    "checkout": "7f3c1a9b4e2d48f0a1c6b8e5d2409af1",
+    "checkout.shipping_submitted": "a18e6c05f9b74d23bc4a71e8305d9f6b",
+    "checkout.payment_submitted": "b2e91d47c8a34f6db05e3ac71f8d6204",
+    "checkout.payment_authorize": "e5a70b23d1c8449fb62d08f4a91c7350",
+    "checkout.inventory.reserve": "d09b4e716fa24c85be3170dc529af846",
+    "checkout.order.create": "c41d0f9a6b7e4238ad1c95e07b3f8621"
+  }
+}

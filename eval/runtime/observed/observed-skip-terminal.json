@@ -1,0 +1,308 @@
+{
+  "org": "local-eval/skip-terminal",
+  "dataset": "spans",
+  "stats_period": "runtime",
+  "traces_sample_rate": 1.0,
+  "span_names": [
+    {
+      "name": "checkout",
+      "count": 6
+    },
+    {
+      "name": "checkout.shipping_submitted",
+      "count": 6
+    },
+    {
+      "name": "checkout.payment_submitted",
+      "count": 6
+    },
+    {
+      "name": "checkout.payment.authorize",
+      "count": 6
+    },
+    {
+      "name": "checkout.inventory.reserve",
+      "count": 5
+    },
+    {
+      "name": "checkout.order.create",
+      "count": 5
+    }
+  ],
+  "span_ops": [
+    {
+      "op": "function",
+      "count": 16
+    },
+    {
+      "op": "ui.action.click",
+      "count": 12
+    },
+    {
+      "op": "ui.action",
+      "count": 6
+    }
+  ],
+  "attributes": [
+    {
+      "key": "cart.currency",
+      "name": "cart.currency",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "USD"
+      ]
+    },
+    {
+      "key": "cart.item_count",
+      "name": "cart.item_count",
+      "attributeType": "number",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        2
+      ]
+    },
+    {
+      "key": "cart.value",
+      "name": "cart.value",
+      "attributeType": "number",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        129.99,
+        130.99,
+        131.99,
+        132.99,
+        134.99
+      ]
+    },
+    {
+      "key": "checkout.entry_point",
+      "name": "checkout.entry_point",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "cart_page"
+      ]
+    },
+    {
+      "key": "checkout.failure_stage",
+      "name": "checkout.failure_stage",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "payment_authorized"
+      ]
+    },
+    {
+      "key": "checkout.id",
+      "name": "checkout.id",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "chk_000000",
+        "chk_000001",
+        "chk_000002",
+        "chk_000003",
+        "chk_000005"
+      ]
+    },
+    {
+      "key": "checkout.outcome",
+      "name": "checkout.outcome",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "completed",
+        "rejected"
+      ]
+    },
+    {
+      "key": "checkout.step",
+      "name": "checkout.step",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "cart_reviewed",
+        "shipping_submitted",
+        "payment_submitted",
+        "payment_authorized",
+        "order_created"
+      ]
+    },
+    {
+      "key": "inventory.outcome",
+      "name": "inventory.outcome",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "reserved"
+      ]
+    },
+    {
+      "key": "order.id",
+      "name": "order.id",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "ord_0000",
+        "ord_0001",
+        "ord_0002",
+        "ord_0005",
+        "ord_0004"
+      ]
+    },
+    {
+      "key": "order.value",
+      "name": "order.value",
+      "attributeType": "number",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        134.48000000000002,
+        135.48000000000002,
+        136.48000000000002,
+        139.48000000000002,
+        138.48000000000002
+      ]
+    },
+    {
+      "key": "payment.decline_reason",
+      "name": "payment.decline_reason",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "insuffic_funds"
+      ]
+    },
+    {
+      "key": "payment.method",
+      "name": "payment.method",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "apple_pay",
+        "card"
+      ]
+    },
+    {
+      "key": "payment.outcome",
+      "name": "payment.outcome",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "authorized",
+        "declined"
+      ]
+    },
+    {
+      "key": "payment.provider",
+      "name": "payment.provider",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "stripe"
+      ]
+    },
+    {
+      "key": "sentry.op",
+      "name": "sentry.op",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "sentry"
+      },
+      "observed_values": [
+        "ui.action",
+        "ui.action.click",
+        "function"
+      ]
+    },
+    {
+      "key": "sentry.origin",
+      "name": "sentry.origin",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "sentry"
+      },
+      "observed_values": [
+        "manual"
+      ]
+    },
+    {
+      "key": "sentry.sample_rate",
+      "name": "sentry.sample_rate",
+      "attributeType": "number",
+      "attributeSource": {
+        "source_type": "sentry"
+      },
+      "observed_values": [
+        1
+      ]
+    },
+    {
+      "key": "sentry.source",
+      "name": "sentry.source",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "sentry"
+      },
+      "observed_values": [
+        "custom"
+      ]
+    },
+    {
+      "key": "user.plan_tier",
+      "name": "user.plan_tier",
+      "attributeType": "string",
+      "attributeSource": {
+        "source_type": "user"
+      },
+      "observed_values": [
+        "pro",
+        "enterprise"
+      ]
+    }
+  ],
+  "example_traces": {
+    "checkout": "938a0c150c314499b580fa49677bb850",
+    "checkout.shipping_submitted": "938a0c150c314499b580fa49677bb850",
+    "checkout.payment_submitted": "938a0c150c314499b580fa49677bb850",
+    "checkout.payment.authorize": "938a0c150c314499b580fa49677bb850",
+    "checkout.inventory.reserve": "938a0c150c314499b580fa49677bb850",
+    "checkout.order.create": "938a0c150c314499b580fa49677bb850"
+  },
+  "_provenance": {
+    "source": "local Sentry envelope collector (eval/runtime/collector.py)",
+    "attributeType": "derived from the REAL JSON value type on the wire \u2014 more reliable than the attributes API, which reports a single type per key",
+    "attributeSource": "HEURISTIC (namespace prefix). The documented `attributeSource.source_type` field is only available from GET /trace-items/attributes/ against a live org.",
+    "traces_sample_rate": "asserted by the runner, not observed"
+  }
+}

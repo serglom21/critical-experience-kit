@@ -1,0 +1,231 @@
+# Attribute registry for the Checkout critical experience.
+#
+# Convention notes (verified):
+#   - Attributes may only be DEFINED in groups of type `attribute_group` whose
+#     id starts with `registry.`. This is prose in semantic-conventions
+#     model/README.md, NOT enforced by weaver — follow it for compatibility.
+#   - The old `prefix:` field is now REJECTED (Error::InvalidGroupUsesPrefix).
+#     Write full attribute ids.
+#   - `examples` is required for string and string[] types.
+#   - Enums use `type: { members: [...] }`; each member needs id/value/stability.
+#
+# Sentry-specific constraints that shaped these choices:
+#   - Product-side span attributes are STRING or NUMBER only. Booleans surface
+#     as the strings 'true'/'false'. Every outcome here is a string enum.
+#   - Span `name` and `op` must stay low-cardinality. All IDs live in
+#     attributes, never in the span name.
+
+groups:
+  # ---------------------------------------------------------------------------
+  - id: registry.checkout
+    type: attribute_group
+    brief: >
+      Attributes identifying and describing a checkout journey instance.
+    attributes:
+      - id: checkout.id
+        type: string
+        stability: development
+        brief: >
+          Unique identifier for one checkout journey instance. Generated when
+          the journey starts and carried on every span in the journey,
+          including spans in other services and other traces.
+        note: >
+          This is the journey correlation key. It is required because a browser
+          navigation starts a NEW Sentry trace, so a multi-page checkout cannot
+          be a single trace. Correlating on `checkout.id` is what makes the
+          funnel queryable end to end.
+        examples: ["chk_01HZY8QK3M", "chk_01J2AB7XPD"]
+
+      - id: checkout.step
+        type:
+          members:
+            - id: cart_reviewed
+              value: "cart_reviewed"
+              stability: development
+              brief: Customer viewed and confirmed cart contents.
+            - id: shipping_submitted
+              value: "shipping_submitted"
+              stability: development
+              brief: Shipping details submitted.
+            - id: payment_submitted
+              value: "payment_submitted"
+              stability: development
+              brief: Payment details submitted by the customer.
+            - id: payment_authorized
+              value: "payment_authorized"
+              stability: development
+              brief: Payment authorization returned by the provider.
+            - id: order_created
+              value: "order_created"
+              stability: development
+              brief: Order persisted.
+            - id: confirmation_viewed
+              value: "confirmation_viewed"
+              stability: development
+              brief: Customer saw the confirmation screen.
+        stability: development
+        brief: The journey step this span represents.
+
+      - id: checkout.outcome
+        type:
+          members:
+            - id: completed
+              value: "completed"
+              stability: development
+              brief: Journey reached order confirmation.
+            - id: failed
+              value: "failed"
+              stability: development
+              brief: Journey terminated on a system or provider error.
+            - id: abandoned
+              value: "abandoned"
+              stability: development
+              brief: Customer left before completing.
+            - id: rejected
+              value: "rejected"
+              stability: development
+              brief: Journey blocked by a business rule (fraud, inventory, entitlement).
+        stability: development
+        brief: >
+          Terminal outcome of the journey. Set on the journey's root span.
+        note: >
+          Deliberately a string enum rather than a boolean: Sentry surfaces
+          boolean attributes as the strings 'true'/'false', and four outcomes
+          answer far more product questions than success/failure.
+
+      - id: checkout.failure_stage
+        type: string
+        stability: development
+        brief: >
+          The `checkout.step` value at which a non-completed journey stopped.
+        note: This is the single most valuable attribute for funnel drop-off analysis.
+        examples: ["payment_submitted", "payment_authorized"]
+
+      - id: checkout.entry_point
+        type: string
+        stability: development
+        brief: Surface the customer entered checkout from.
+        examples: ["cart_page", "buy_now_button", "saved_cart_email"]
+
+  # ---------------------------------------------------------------------------
+  - id: registry.cart
+    type: attribute_group
+    brief: Cart composition at the moment the journey started.
+    attributes:
+      - id: cart.value
+        type: double
+        stability: development
+        brief: >
+          Total cart value in the major unit of `cart.currency`.
+        note: >
+          Numeric attributes are visualizable as span metrics in Trace Explorer
+          with no setup — e.g. `p50(cart.value)`, `sum(cart.value)`. This is the
+          attribute that turns a latency chart into a revenue chart.
+        examples: [129.99, 24.5]
+
+      - id: cart.item_count
+        type: int
+        stability: development
+        brief: Number of line items in the cart.
+        examples: [1, 7]
+
+      - id: cart.currency
+        type: string
+        stability: development
+        brief: ISO 4217 currency code for `cart.value`.
+        examples: ["USD", "EUR"]
+
+  # ---------------------------------------------------------------------------
+  - id: registry.payment
+    type: attribute_group
+    brief: Payment authorization detail.
+    attributes:
+      - id: payment.method
+        type: string
+        stability: development
+        brief: Payment instrument type chosen by the customer.
+        examples: ["card", "paypal", "apple_pay", "wallet"]
+
+      - id: payment.provider
+        type: string
+        stability: development
+        brief: Downstream payment provider handling authorization.
+        examples: ["stripe", "adyen", "braintree"]
+
+      - id: payment.outcome
+        type:
+          members:
+            - id: authorized
+              value: "authorized"
+              stability: development
+              brief: Provider authorized the payment.
+            - id: declined
+              value: "declined"
+              stability: development
+              brief: Provider declined the payment.
+            - id: error
+              value: "error"
+              stability: development
+              brief: Provider call failed or timed out.
+            - id: requires_action
+              value: "requires_action"
+              stability: development
+              brief: Additional customer action required (e.g. 3DS challenge).
+        stability: development
+        brief: Result of the authorization attempt.
+
+      - id: payment.decline_reason
+        type: string
+        stability: development
+        brief: >
+          Provider-supplied decline or error code. MUST be the coded reason,
+          never a free-text message and never raw provider payload.
+        note: >
+          Keep this low-ish cardinality so it is useful in a Group By. Do not
+          put card numbers, tokens, names, or emails anywhere on a span.
+        examples: ["insuffic_funds", "do_not_honor", "3ds_required", "gateway_timeout"]
+
+  # ---------------------------------------------------------------------------
+  - id: registry.order
+    type: attribute_group
+    brief: Order created by a completed checkout journey.
+    attributes:
+      - id: order.id
+        type: string
+        stability: development
+        brief: Identifier of the persisted order.
+        examples: ["ord_8812XZ", "1000418822"]
+
+      - id: order.value
+        type: double
+        stability: development
+        brief: >
+          Final order total in the major unit of `cart.currency`, after
+          discounts, shipping, and tax.
+        note: >
+          Distinct from `cart.value` on purpose. The delta between them is
+          itself a business signal (discount leakage, tax surprise abandonment).
+        examples: [134.48]
+
+  # ---------------------------------------------------------------------------
+  - id: registry.inventory
+    type: attribute_group
+    brief: Inventory reservation during checkout.
+    attributes:
+      - id: inventory.outcome
+        type:
+          members:
+            - id: reserved
+              value: "reserved"
+              stability: development
+              brief: All line items reserved.
+            - id: partial
+              value: "partial"
+              stability: development
+              brief: Some line items could not be reserved.
+            - id: unavailable
+              value: "unavailable"
+              stability: development
+              brief: Reservation failed entirely.
+        stability: development
+        brief: Result of the inventory reservation step.

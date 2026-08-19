@@ -1,0 +1,69 @@
+# Warden config — Sentry critical experience review
+#
+# Verified against @sentry/warden v0.43.0 (dist/config/schema.d.ts).
+# `warden init` scaffolds this file plus .github/workflows/warden.yml and
+# registers ZERO skills — all [[skills]] blocks are commented out by default.
+#
+# Severity note: SeverityThresholdSchema is ['off','high','medium','low'].
+# `critical` and `medium`/`info` are accepted but normalized —
+# critical -> high, info -> low. There are only three real buckets.
+#
+# Skill resolution order:
+#   1. `remote`
+#   2. a direct path (contains / or \, or starts with .)
+#   3. .warden/skills/  →  .agents/skills/  →  .claude/skills/
+#   4. built-ins (only `security-review` and `code-review` actually ship)
+
+version = 1
+
+[defaults]
+runtime = "pi"
+failOn = "high"
+reportOn = "medium"
+
+# ---------------------------------------------------------------------------
+# Sentry critical experience instrumentation review
+#
+# Deliberately advisory on day one. `failOn = "off"` means it comments but
+# never blocks a merge; `minConfidence = "high"` suppresses speculative
+# findings. Earn the right to block, then raise failOn to "high" and scope it
+# to PII findings only.
+# ---------------------------------------------------------------------------
+[[skills]]
+# Local development: point at the checked-in skill directory.
+name = "./warden-skill/sentry-critical-experience"
+#
+# Vendor-distributed alternative — pin to a commit SHA so the rules cannot
+# change underneath the customer. Unpinned remotes refresh per
+# WARDEN_SKILL_CACHE_TTL (default 24h); pinned SHAs cache permanently.
+# remote = "sentry-solutions/warden-skills@<commit-sha>"
+
+# Scope tightly. A broad glob is the fastest way to make this skill annoying
+# and then ignored. List only the directories the journey spec covers.
+paths = [
+  "src/checkout/**/*.{ts,tsx,js,jsx}",
+  "src/payments/**/*.{ts,tsx,js,jsx}",
+  "src/orders/**/*.{ts,tsx,js,jsx}",
+  "app/api/checkout/**/*.{ts,js}",
+]
+
+ignorePaths = [
+  "**/*.test.*",
+  "**/*.spec.*",
+  "**/__tests__/**",
+  "**/__fixtures__/**",
+  "**/__mocks__/**",
+  "**/*.stories.*",
+  "**/generated/**",
+  "**/*.d.ts",
+]
+
+minConfidence = "high"
+failOn = "off"        # advisory only — comments, never blocks
+reportOn = "low"      # but surface everything it does find
+maxFindings = 10
+
+[[skills.triggers]]
+type = "pull_request"
+actions = ["opened", "synchronize", "reopened", "labeled"]
+draft = false

@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentry-se.example.com/schemas/journey-candidate/0.1.0",
+  "title": "Critical Experience journey candidate",
+  "description": "One candidate journey in the seven-role grammar (see GRAMMAR.md). Deliberately permissive: only id, name, and source are required. Missing roles are a REPORTED OUTCOME of the resolver, not a validation error — a declared journey with nothing but a name is a legitimate starting point.",
+  "type": "object",
+  "required": ["journeys"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "journeys": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/journey" }
+    }
+  },
+  "$defs": {
+    "journey": {
+      "type": "object",
+      "required": ["id", "name", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$",
+          "description": "Stable slug. snake_case."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "ROLE 1. Business name, not technical. 'Checkout', never 'POST /api/orders'. No inference can produce this — it comes from a human."
+        },
+        "source": {
+          "enum": ["declared", "discovered:code", "discovered:telemetry", "discovered:signal"],
+          "description": "Provenance. `declared` ranks first by default because the customer has already answered whether this matters to the business."
+        },
+        "confidence": {
+          "enum": ["high", "medium", "low"],
+          "default": "medium"
+        },
+        "business_impact": {
+          "enum": ["critical", "important", "normal"],
+          "description": "HUMAN-ASSIGNED ONLY. Never derived from volume — health checks and polling dominate traffic while refunds and disputes are rare and expensive."
+        },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Alternate names used to force a cross-source match when normalized names differ."
+        },
+        "owner": { "type": "string" },
+        "observed_volume": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Instances seen in the discovery window. A tiebreaker AFTER business_impact, never a ranking signal on its own."
+        },
+        "correlation_key": {
+          "type": "object",
+          "description": "ROLE 2. The case notion. NOT the trace ID — a browser navigation starts a new trace, and async work runs in its own. Highest-leverage attribute in the grammar.",
+          "required": ["attribute"],
+          "additionalProperties": false,
+          "properties": {
+            "attribute": { "type": "string" },
+            "persists_across": {
+              "type": "array",
+              "items": { "enum": ["page_load", "session", "service", "async_job", "webhook"] }
+            }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "description": "ROLE 3. Enumerable and ordered. The enum IS the journey definition — it's what makes drop-off computable.",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "span_name": {
+                "type": "string",
+                "description": "OPTIONAL implementation binding: the literal Sentry span name for this step. Omit it and the convention applies — `<journey_id>` for the first step, `<journey_id>.<step_id>` for the rest. This field is the SLI-specification-vs-implementation seam: the step id is the spec, the span name is one way to measure it."
+              },
+              "surface": { "type": "string", "description": "browser | node | mobile | worker | ..." },
+              "impact": { "enum": ["critical", "important", "normal"] },
+              "evidence": { "type": "string", "description": "For discovered steps: the route, handler, or span name this was inferred from." }
+            }
+          }
+        },
+        "outcome": {
+          "type": "object",
+          "description": "ROLE 4. String enum, never boolean — Sentry renders booleans as the strings 'true'/'false', and a binary hides the distinction that matters.",
+          "required": ["attribute", "values"],
+          "additionalProperties": false,
+          "properties": {
+            "attribute": { "type": "string" },
+            "values": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+            "success_values": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "default_value": { "type": "string", "description": "Set at journey start and overwritten on a terminal event, so an abandoned journey is distinguishable from an uninstrumented one." }
+          }
+        },
+        "failure_reason": {
+          "type": "object",
+          "description": "ROLE 5. Bounded, coded, low-cardinality. Never free text, never a raw upstream payload.",
+          "required": ["attribute"],
+          "additionalProperties": false,
+          "properties": {
+            "attribute": { "type": "string" },
+            "bounded": { "type": "boolean", "default": true },
+            "known_values": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "magnitude": {
+          "type": "array",
+          "description": "ROLE 6. Numeric business measure. Must be a number — a value stringified as \"129.99\" cannot be aggregated and is a defect.",
+          "items": {
+            "type": "object",
+            "required": ["attribute", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "attribute": { "type": "string" },
+              "type": { "enum": ["int", "double"] },
+              "step": { "type": "string", "description": "The value-bearing step this attaches to." },
+              "unit": { "type": "string" }
+            }
+          }
+        },
+        "actor_segment": {
+          "type": "array",
+          "description": "ROLE 7. Categorical slicing axes. Turns 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'.",
+          "items": {
+            "type": "object",
+            "required": ["attribute"],
+            "additionalProperties": false,
+            "properties": {
+              "attribute": { "type": "string" },
+              "already_available": { "type": "boolean", "description": "True when it already exists in their auth/tenancy layer and needs no new instrumentation." }
+            }
+          }
+        },
+        "excluded": {
+          "type": "boolean",
+          "default": false,
+          "description": "Human-marked noise. Drops the candidate from the worklist while keeping it in the record for auditability. Exemptions are first-class here for the reason every service-scorecard vendor converged on them: worklist items a team can never action destroy the artifact's credibility. Discovery will surface health probes, static-asset loads, and polling loops — nothing in telemetry distinguishes a probe from a purchase, so the answer is a one-line human exclusion, not a cleverer heuristic."
+        },
+        "excluded_reason": {
+          "type": "string",
+          "description": "Why. Required in practice even though the schema doesn't enforce it — an unexplained exclusion is indistinguishable from an oversight six months later."
+        },
+        "needs_clarification": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Open questions carried into the spec as [NEEDS CLARIFICATION] markers. The resolver ADDS derived entries for missing roles; explicit entries here are preserved."
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

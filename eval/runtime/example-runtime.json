@@ -1,0 +1,1298 @@
+{
+  "version": 1,
+  "task": "/sessions/eager-kind-fermat/mnt/outputs/critical-experience-kit/eval/runtime/tasks/checkout-js",
+  "journey": "checkout",
+  "variants": [
+    {
+      "variant": "correct",
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout",
+        "coverage_state": "complete",
+        "steps_instrumented": 7,
+        "steps_total": 7,
+        "score": 100.0,
+        "raw_score": 100.0,
+        "grade": "excellent",
+        "caps": [],
+        "low_confidence": false,
+        "dark_segments": [],
+        "missing_steps": [],
+        "notes": [
+          "outcome admits non-success values: abandoned, failed, rejected"
+        ],
+        "findings": [
+          {
+            "rule": "CE-001",
+            "description": "Journey root span present",
+            "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-002",
+            "description": "Terminal outcome-bearing span present",
+            "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.confirmation_viewed` \u2014 5 observed",
+            "extent": null,
+            "entity": "checkout.confirmation_viewed",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 1 `cart_reviewed` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "expected span `checkout` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 2 `shipping_submitted` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "expected span `checkout.shipping_submitted` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.shipping_submitted",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 3 `payment_submitted` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.payment_submitted` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.payment_submitted",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 4 `payment_authorized` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.payment.authorize` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.payment.authorize",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 5 `inventory_reserved` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.inventory.reserve` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.inventory.reserve",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 6 `order_created` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.order.create` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.order.create",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 7 `confirmation_viewed` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.confirmation_viewed` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.confirmation_viewed",
+            "example": "f7a9f03439cd4a55a7397e60a27e86bf"
+          },
+          {
+            "rule": "CE-012",
+            "description": "No dark segment between instrumented steps",
+            "rationale": "A gap in the middle is worse than a gap at the end: latency and drop-off from the dark steps are silently attributed to the last instrumented step. This is the finding that produces the 'visible to payment, then goes dark' sentence.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "none detected",
+            "extent": null,
+            "entity": null,
+            "example": null
+          },
+          {
+            "rule": "CE-013",
+            "description": "No span name drift",
+            "rationale": "A near-miss name produces no error, no failing test, and no data \u2014 the team believes the step is instrumented while every query returns empty. Reported apart from 'missing' because the fix is a rename, not new instrumentation.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "none detected",
+            "extent": null,
+            "entity": null,
+            "example": null
+          },
+          {
+            "rule": "CE-004",
+            "description": "Correlation key attribute present",
+            "rationale": "The correlation key stitches steps into one journey instance. A browser navigation starts a new Sentry trace, so the trace ID cannot do this job. Without the key you have disconnected spans, not a journey.",
+            "target": "attribute",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "`checkout.id` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.id",
+            "example": null
+          },
+          {
+            "rule": "CE-005",
+            "description": "Correlation key is customer-defined",
+            "rationale": "A `sentry` source type means the product already owns that key with its own semantics \u2014 using it for a business correlation key risks a silent collision when Sentry's meaning diverges from yours.",
+            "target": "attribute",
+            "impact": "low",
+            "weight": 10,
+            "passed": true,
+            "detail": "`checkout.id` source is `user`",
+            "extent": null,
+            "entity": "checkout.id",
+            "example": null
+          },
+          {
+            "rule": "CE-006",
+            "description": "Outcome attribute present",
+            "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+            "target": "attribute",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "`checkout.outcome` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.outcome",
+            "example": null
+          },
+          {
+            "rule": "CE-007",
+            "description": "Outcome is a string enum, not a boolean",
+            "rationale": "Sentry renders boolean attributes as the strings 'true'/'false', and a binary collapses failed, abandoned, and rejected into one bucket. Those three route to three different teams.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`checkout.outcome` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.outcome",
+            "example": null
+          },
+          {
+            "rule": "CE-008",
+            "description": "Failure reason present (outcome admits failure)",
+            "rationale": "Without a coded reason every failure collapses into one undiagnosable bucket. Usually the highest-value attribute for the customer, because it is the one that routes a problem to an owning team.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`payment.decline_reason` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "payment.decline_reason",
+            "example": null
+          },
+          {
+            "rule": "CE-009",
+            "description": "Magnitude `cart.value` present",
+            "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`cart.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "cart.value",
+            "example": null
+          },
+          {
+            "rule": "CE-009",
+            "description": "Magnitude `order.value` present",
+            "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`order.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "order.value",
+            "example": null
+          },
+          {
+            "rule": "CE-010",
+            "description": "Magnitude `cart.value` is numeric",
+            "rationale": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`cart.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "cart.value",
+            "example": null
+          },
+          {
+            "rule": "CE-010",
+            "description": "Magnitude `order.value` is numeric",
+            "rationale": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`order.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "order.value",
+            "example": null
+          },
+          {
+            "rule": "CE-011",
+            "description": "Actor segment present",
+            "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+            "target": "attribute",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "`user.plan_tier`, `payment.method`",
+            "extent": null,
+            "entity": null,
+            "example": null
+          }
+        ]
+      },
+      "types": [
+        {
+          "key": "cart.currency",
+          "type": "string",
+          "sample": [
+            "USD"
+          ]
+        },
+        {
+          "key": "cart.item_count",
+          "type": "number",
+          "sample": [
+            2
+          ]
+        },
+        {
+          "key": "cart.value",
+          "type": "number",
+          "sample": [
+            129.99,
+            130.99,
+            131.99
+          ]
+        },
+        {
+          "key": "checkout.entry_point",
+          "type": "string",
+          "sample": [
+            "cart_page"
+          ]
+        },
+        {
+          "key": "checkout.failure_stage",
+          "type": "string",
+          "sample": [
+            "payment_authorized"
+          ]
+        },
+        {
+          "key": "checkout.id",
+          "type": "string",
+          "sample": [
+            "chk_000000",
+            "chk_000001",
+            "chk_000002"
+          ]
+        },
+        {
+          "key": "checkout.outcome",
+          "type": "string",
+          "sample": [
+            "completed",
+            "rejected"
+          ]
+        },
+        {
+          "key": "checkout.step",
+          "type": "string",
+          "sample": [
+            "cart_reviewed",
+            "shipping_submitted",
+            "payment_submitted"
+          ]
+        },
+        {
+          "key": "inventory.outcome",
+          "type": "string",
+          "sample": [
+            "reserved"
+          ]
+        },
+        {
+          "key": "order.id",
+          "type": "string",
+          "sample": [
+            "ord_0000",
+            "ord_0001",
+            "ord_0002"
+          ]
+        },
+        {
+          "key": "order.value",
+          "type": "number",
+          "sample": [
+            134.48000000000002,
+            135.48000000000002,
+            136.48000000000002
+          ]
+        },
+        {
+          "key": "payment.decline_reason",
+          "type": "string",
+          "sample": [
+            "insuffic_funds"
+          ]
+        },
+        {
+          "key": "payment.method",
+          "type": "string",
+          "sample": [
+            "apple_pay",
+            "card"
+          ]
+        },
+        {
+          "key": "payment.outcome",
+          "type": "string",
+          "sample": [
+            "authorized",
+            "declined"
+          ]
+        },
+        {
+          "key": "payment.provider",
+          "type": "string",
+          "sample": [
+            "stripe"
+          ]
+        },
+        {
+          "key": "user.plan_tier",
+          "type": "string",
+          "sample": [
+            "pro",
+            "enterprise"
+          ]
+        }
+      ],
+      "driver": {
+        "returncode": 0,
+        "stdout": "{\"variant\":\"correct\",\"runs\":6,\"declined\":1}",
+        "stderr": "",
+        "envelopes": 6
+      }
+    },
+    {
+      "variant": "stringified",
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout",
+        "coverage_state": "complete",
+        "steps_instrumented": 7,
+        "steps_total": 7,
+        "score": 95.2,
+        "raw_score": 95.2,
+        "grade": "excellent",
+        "caps": [],
+        "low_confidence": false,
+        "dark_segments": [],
+        "missing_steps": [],
+        "notes": [
+          "outcome admits non-success values: abandoned, failed, rejected"
+        ],
+        "findings": [
+          {
+            "rule": "CE-001",
+            "description": "Journey root span present",
+            "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-002",
+            "description": "Terminal outcome-bearing span present",
+            "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.confirmation_viewed` \u2014 5 observed",
+            "extent": null,
+            "entity": "checkout.confirmation_viewed",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 1 `cart_reviewed` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "expected span `checkout` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 2 `shipping_submitted` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "expected span `checkout.shipping_submitted` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.shipping_submitted",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 3 `payment_submitted` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.payment_submitted` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.payment_submitted",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 4 `payment_authorized` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.payment.authorize` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.payment.authorize",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 5 `inventory_reserved` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.inventory.reserve` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.inventory.reserve",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 6 `order_created` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.order.create` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.order.create",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 7 `confirmation_viewed` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.confirmation_viewed` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.confirmation_viewed",
+            "example": "3e4ade39b48942e6befcb8ad91b3d271"
+          },
+          {
+            "rule": "CE-012",
+            "description": "No dark segment between instrumented steps",
+            "rationale": "A gap in the middle is worse than a gap at the end: latency and drop-off from the dark steps are silently attributed to the last instrumented step. This is the finding that produces the 'visible to payment, then goes dark' sentence.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "none detected",
+            "extent": null,
+            "entity": null,
+            "example": null
+          },
+          {
+            "rule": "CE-013",
+            "description": "No span name drift",
+            "rationale": "A near-miss name produces no error, no failing test, and no data \u2014 the team believes the step is instrumented while every query returns empty. Reported apart from 'missing' because the fix is a rename, not new instrumentation.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "none detected",
+            "extent": null,
+            "entity": null,
+            "example": null
+          },
+          {
+            "rule": "CE-004",
+            "description": "Correlation key attribute present",
+            "rationale": "The correlation key stitches steps into one journey instance. A browser navigation starts a new Sentry trace, so the trace ID cannot do this job. Without the key you have disconnected spans, not a journey.",
+            "target": "attribute",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "`checkout.id` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.id",
+            "example": null
+          },
+          {
+            "rule": "CE-005",
+            "description": "Correlation key is customer-defined",
+            "rationale": "A `sentry` source type means the product already owns that key with its own semantics \u2014 using it for a business correlation key risks a silent collision when Sentry's meaning diverges from yours.",
+            "target": "attribute",
+            "impact": "low",
+            "weight": 10,
+            "passed": true,
+            "detail": "`checkout.id` source is `user`",
+            "extent": null,
+            "entity": "checkout.id",
+            "example": null
+          },
+          {
+            "rule": "CE-006",
+            "description": "Outcome attribute present",
+            "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+            "target": "attribute",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "`checkout.outcome` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.outcome",
+            "example": null
+          },
+          {
+            "rule": "CE-007",
+            "description": "Outcome is a string enum, not a boolean",
+            "rationale": "Sentry renders boolean attributes as the strings 'true'/'false', and a binary collapses failed, abandoned, and rejected into one bucket. Those three route to three different teams.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`checkout.outcome` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.outcome",
+            "example": null
+          },
+          {
+            "rule": "CE-008",
+            "description": "Failure reason present (outcome admits failure)",
+            "rationale": "Without a coded reason every failure collapses into one undiagnosable bucket. Usually the highest-value attribute for the customer, because it is the one that routes a problem to an owning team.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`payment.decline_reason` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "payment.decline_reason",
+            "example": null
+          },
+          {
+            "rule": "CE-009",
+            "description": "Magnitude `cart.value` present",
+            "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`cart.value` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "cart.value",
+            "example": null
+          },
+          {
+            "rule": "CE-009",
+            "description": "Magnitude `order.value` present",
+            "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`order.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "order.value",
+            "example": null
+          },
+          {
+            "rule": "CE-010",
+            "description": "Magnitude `cart.value` is numeric",
+            "rationale": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": false,
+            "detail": "`cart.value` is type `string`, expected `number`",
+            "extent": null,
+            "entity": "cart.value",
+            "example": null
+          },
+          {
+            "rule": "CE-010",
+            "description": "Magnitude `order.value` is numeric",
+            "rationale": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`order.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "order.value",
+            "example": null
+          },
+          {
+            "rule": "CE-011",
+            "description": "Actor segment present",
+            "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+            "target": "attribute",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "`user.plan_tier`, `payment.method`",
+            "extent": null,
+            "entity": null,
+            "example": null
+          }
+        ]
+      },
+      "types": [
+        {
+          "key": "cart.currency",
+          "type": "string",
+          "sample": [
+            "USD"
+          ]
+        },
+        {
+          "key": "cart.item_count",
+          "type": "number",
+          "sample": [
+            2
+          ]
+        },
+        {
+          "key": "cart.value",
+          "type": "string",
+          "sample": [
+            "129.99",
+            "130.99",
+            "131.99"
+          ]
+        },
+        {
+          "key": "checkout.entry_point",
+          "type": "string",
+          "sample": [
+            "cart_page"
+          ]
+        },
+        {
+          "key": "checkout.failure_stage",
+          "type": "string",
+          "sample": [
+            "payment_authorized"
+          ]
+        },
+        {
+          "key": "checkout.id",
+          "type": "string",
+          "sample": [
+            "chk_000000",
+            "chk_000001",
+            "chk_000002"
+          ]
+        },
+        {
+          "key": "checkout.outcome",
+          "type": "string",
+          "sample": [
+            "completed",
+            "rejected"
+          ]
+        },
+        {
+          "key": "checkout.step",
+          "type": "string",
+          "sample": [
+            "cart_reviewed",
+            "shipping_submitted",
+            "payment_submitted"
+          ]
+        },
+        {
+          "key": "inventory.outcome",
+          "type": "string",
+          "sample": [
+            "reserved"
+          ]
+        },
+        {
+          "key": "order.id",
+          "type": "string",
+          "sample": [
+            "ord_0000",
+            "ord_0001",
+            "ord_0002"
+          ]
+        },
+        {
+          "key": "order.value",
+          "type": "number",
+          "sample": [
+            134.48000000000002,
+            135.48000000000002,
+            136.48000000000002
+          ]
+        },
+        {
+          "key": "payment.decline_reason",
+          "type": "string",
+          "sample": [
+            "insuffic_funds"
+          ]
+        },
+        {
+          "key": "payment.method",
+          "type": "string",
+          "sample": [
+            "apple_pay",
+            "card"
+          ]
+        },
+        {
+          "key": "payment.outcome",
+          "type": "string",
+          "sample": [
+            "authorized",
+            "declined"
+          ]
+        },
+        {
+          "key": "payment.provider",
+          "type": "string",
+          "sample": [
+            "stripe"
+          ]
+        },
+        {
+          "key": "user.plan_tier",
+          "type": "string",
+          "sample": [
+            "pro",
+            "enterprise"
+          ]
+        }
+      ],
+      "driver": {
+        "returncode": 0,
+        "stdout": "{\"variant\":\"stringified\",\"runs\":6,\"declined\":1}",
+        "stderr": "",
+        "envelopes": 6
+      }
+    },
+    {
+      "variant": "skip-terminal",
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout",
+        "coverage_state": "partial",
+        "steps_instrumented": 6,
+        "steps_total": 7,
+        "score": 74,
+        "raw_score": 88.9,
+        "grade": "needs improvement",
+        "caps": [
+          "CE-002 (no terminal outcome span) caps the score at 74"
+        ],
+        "low_confidence": false,
+        "dark_segments": [],
+        "missing_steps": [
+          "checkout.confirmation_viewed"
+        ],
+        "notes": [
+          "outcome admits non-success values: abandoned, failed, rejected"
+        ],
+        "findings": [
+          {
+            "rule": "CE-001",
+            "description": "Journey root span present",
+            "rationale": "Without a root span there is no journey to attach outcomes to and no funnel is queryable. Every other finding is moot until this passes.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout",
+            "example": "938a0c150c314499b580fa49677bb850"
+          },
+          {
+            "rule": "CE-002",
+            "description": "Terminal outcome-bearing span present",
+            "rationale": "A journey that commits its business effect but never records reaching a terminal state cannot distinguish success from failure \u2014 the most expensive possible blind spot in a funnel.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": false,
+            "detail": "expected span `checkout.confirmation_viewed` \u2014 not found",
+            "extent": null,
+            "entity": "checkout.confirmation_viewed",
+            "example": null
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 1 `cart_reviewed` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "expected span `checkout` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout",
+            "example": "938a0c150c314499b580fa49677bb850"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 2 `shipping_submitted` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "expected span `checkout.shipping_submitted` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.shipping_submitted",
+            "example": "938a0c150c314499b580fa49677bb850"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 3 `payment_submitted` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.payment_submitted` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.payment_submitted",
+            "example": "938a0c150c314499b580fa49677bb850"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 4 `payment_authorized` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.payment.authorize` \u2014 6 observed",
+            "extent": null,
+            "entity": "checkout.payment.authorize",
+            "example": "938a0c150c314499b580fa49677bb850"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 5 `inventory_reserved` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "expected span `checkout.inventory.reserve` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.inventory.reserve",
+            "example": "938a0c150c314499b580fa49677bb850"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 6 `order_created` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "expected span `checkout.order.create` \u2014 5 observed",
+            "extent": "~17% of journey instances lack this span (approx.)",
+            "entity": "checkout.order.create",
+            "example": "938a0c150c314499b580fa49677bb850"
+          },
+          {
+            "rule": "CE-003",
+            "description": "Step 7 `confirmation_viewed` instrumented",
+            "rationale": "A missing step is a dark segment. Drop-off gets attributed to the step before it, so the owning team never sees the problem.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": false,
+            "detail": "expected span `checkout.confirmation_viewed` \u2014 not found",
+            "extent": "100% of the 6 observed journey instances (approx.)",
+            "entity": "checkout.confirmation_viewed",
+            "example": null
+          },
+          {
+            "rule": "CE-012",
+            "description": "No dark segment between instrumented steps",
+            "rationale": "A gap in the middle is worse than a gap at the end: latency and drop-off from the dark steps are silently attributed to the last instrumented step. This is the finding that produces the 'visible to payment, then goes dark' sentence.",
+            "target": "span",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "none detected",
+            "extent": null,
+            "entity": null,
+            "example": null
+          },
+          {
+            "rule": "CE-013",
+            "description": "No span name drift",
+            "rationale": "A near-miss name produces no error, no failing test, and no data \u2014 the team believes the step is instrumented while every query returns empty. Reported apart from 'missing' because the fix is a rename, not new instrumentation.",
+            "target": "span",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "none detected",
+            "extent": null,
+            "entity": null,
+            "example": null
+          },
+          {
+            "rule": "CE-004",
+            "description": "Correlation key attribute present",
+            "rationale": "The correlation key stitches steps into one journey instance. A browser navigation starts a new Sentry trace, so the trace ID cannot do this job. Without the key you have disconnected spans, not a journey.",
+            "target": "attribute",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "`checkout.id` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.id",
+            "example": null
+          },
+          {
+            "rule": "CE-005",
+            "description": "Correlation key is customer-defined",
+            "rationale": "A `sentry` source type means the product already owns that key with its own semantics \u2014 using it for a business correlation key risks a silent collision when Sentry's meaning diverges from yours.",
+            "target": "attribute",
+            "impact": "low",
+            "weight": 10,
+            "passed": true,
+            "detail": "`checkout.id` source is `user`",
+            "extent": null,
+            "entity": "checkout.id",
+            "example": null
+          },
+          {
+            "rule": "CE-006",
+            "description": "Outcome attribute present",
+            "rationale": "The outcome is the numerator of every funnel question. Without it you can measure latency and errors but not whether the business process succeeded.",
+            "target": "attribute",
+            "impact": "critical",
+            "weight": 40,
+            "passed": true,
+            "detail": "`checkout.outcome` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.outcome",
+            "example": null
+          },
+          {
+            "rule": "CE-007",
+            "description": "Outcome is a string enum, not a boolean",
+            "rationale": "Sentry renders boolean attributes as the strings 'true'/'false', and a binary collapses failed, abandoned, and rejected into one bucket. Those three route to three different teams.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`checkout.outcome` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "checkout.outcome",
+            "example": null
+          },
+          {
+            "rule": "CE-008",
+            "description": "Failure reason present (outcome admits failure)",
+            "rationale": "Without a coded reason every failure collapses into one undiagnosable bucket. Usually the highest-value attribute for the customer, because it is the one that routes a problem to an owning team.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`payment.decline_reason` present (type `string`, source `user`)",
+            "extent": null,
+            "entity": "payment.decline_reason",
+            "example": null
+          },
+          {
+            "rule": "CE-009",
+            "description": "Magnitude `cart.value` present",
+            "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`cart.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "cart.value",
+            "example": null
+          },
+          {
+            "rule": "CE-009",
+            "description": "Magnitude `order.value` present",
+            "rationale": "The magnitude is what turns a latency chart into a revenue chart. Numeric span attributes are chartable in Trace Explorer with no setup.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`order.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "order.value",
+            "example": null
+          },
+          {
+            "rule": "CE-010",
+            "description": "Magnitude `cart.value` is numeric",
+            "rationale": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`cart.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "cart.value",
+            "example": null
+          },
+          {
+            "rule": "CE-010",
+            "description": "Magnitude `order.value` is numeric",
+            "rationale": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+            "target": "attribute",
+            "impact": "important",
+            "weight": 30,
+            "passed": true,
+            "detail": "`order.value` present (type `number`, source `user`)",
+            "extent": null,
+            "entity": "order.value",
+            "example": null
+          },
+          {
+            "rule": "CE-011",
+            "description": "Actor segment present",
+            "rationale": "Segments turn 'checkout is slow' into 'checkout is slow for enterprise customers in the EU on mobile'. Usually the cheapest role to fill, since it often already exists in the auth or tenancy layer.",
+            "target": "attribute",
+            "impact": "normal",
+            "weight": 20,
+            "passed": true,
+            "detail": "`user.plan_tier`, `payment.method`",
+            "extent": null,
+            "entity": null,
+            "example": null
+          }
+        ]
+      },
+      "types": [
+        {
+          "key": "cart.currency",
+          "type": "string",
+          "sample": [
+            "USD"
+          ]
+        },
+        {
+          "key": "cart.item_count",
+          "type": "number",
+          "sample": [
+            2
+          ]
+        },
+        {
+          "key": "cart.value",
+          "type": "number",
+          "sample": [
+            129.99,
+            130.99,
+            131.99
+          ]
+        },
+        {
+          "key": "checkout.entry_point",
+          "type": "string",
+          "sample": [
+            "cart_page"
+          ]
+        },
+        {
+          "key": "checkout.failure_stage",
+          "type": "string",
+          "sample": [
+            "payment_authorized"
+          ]
+        },
+        {
+          "key": "checkout.id",
+          "type": "string",
+          "sample": [
+            "chk_000000",
+            "chk_000001",
+            "chk_000002"
+          ]
+        },
+        {
+          "key": "checkout.outcome",
+          "type": "string",
+          "sample": [
+            "completed",
+            "rejected"
+          ]
+        },
+        {
+          "key": "checkout.step",
+          "type": "string",
+          "sample": [
+            "cart_reviewed",
+            "shipping_submitted",
+            "payment_submitted"
+          ]
+        },
+        {
+          "key": "inventory.outcome",
+          "type": "string",
+          "sample": [
+            "reserved"
+          ]
+        },
+        {
+          "key": "order.id",
+          "type": "string",
+          "sample": [
+            "ord_0000",
+            "ord_0001",
+            "ord_0002"
+          ]
+        },
+        {
+          "key": "order.value",
+          "type": "number",
+          "sample": [
+            134.48000000000002,
+            135.48000000000002,
+            136.48000000000002
+          ]
+        },
+        {
+          "key": "payment.decline_reason",
+          "type": "string",
+          "sample": [
+            "insuffic_funds"
+          ]
+        },
+        {
+          "key": "payment.method",
+          "type": "string",
+          "sample": [
+            "apple_pay",
+            "card"
+          ]
+        },
+        {
+          "key": "payment.outcome",
+          "type": "string",
+          "sample": [
+            "authorized",
+            "declined"
+          ]
+        },
+        {
+          "key": "payment.provider",
+          "type": "string",
+          "sample": [
+            "stripe"
+          ]
+        },
+        {
+          "key": "user.plan_tier",
+          "type": "string",
+          "sample": [
+            "pro",
+            "enterprise"
+          ]
+        }
+      ],
+      "driver": {
+        "returncode": 0,
+        "stdout": "{\"variant\":\"skip-terminal\",\"runs\":6,\"declined\":1}",
+        "stderr": "",
+        "envelopes": 6
+      }
+    }
+  ]
+}

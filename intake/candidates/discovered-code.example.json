@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "_comment": [
+    "Simulated output of the customer-side code discovery pass: routes, handlers,",
+    "state machines, and dependency manifests. Runs on the customer's machine,",
+    "which is why it can read the repo at all.",
+    "",
+    "Note what is and isn't here. Structural roles (name, correlation key, steps)",
+    "are inferred with evidence. Semantic roles (outcome, failure reason,",
+    "magnitude, segment) are absent by design — nothing in a codebase says which",
+    "flow generates revenue or what counts as success."
+  ],
+  "journeys": [
+    {
+      "id": "checkout_flow",
+      "name": "Checkout Flow",
+      "source": "discovered:code",
+      "confidence": "high",
+      "correlation_key": {
+        "attribute": "checkout.id",
+        "persists_across": ["page_load", "service"]
+      },
+      "steps": [
+        { "id": "cart_reviewed", "surface": "browser", "evidence": "src/checkout/CartReview.tsx" },
+        { "id": "shipping_submitted", "surface": "browser", "evidence": "src/checkout/ShippingForm.tsx" },
+        { "id": "payment_submitted", "surface": "browser", "evidence": "src/checkout/PaymentForm.tsx" },
+        { "id": "payment_authorized", "surface": "node", "evidence": "app/api/checkout/payment/route.ts → stripe.paymentIntents.create" },
+        { "id": "order_created", "surface": "node", "evidence": "src/orders/create.ts" }
+      ],
+      "notes": "stripe@^18 in package.json — strongest business-criticality signal available from static analysis."
+    },
+    {
+      "id": "plan_downgrade",
+      "name": "Plan Downgrade",
+      "source": "discovered:code",
+      "confidence": "medium",
+      "correlation_key": {
+        "attribute": "subscription.id"
+      },
+      "steps": [
+        { "id": "downgrade_requested", "surface": "browser", "evidence": "src/billing/DowngradeModal.tsx" },
+        { "id": "proration_calculated", "surface": "node", "evidence": "app/api/billing/downgrade/route.ts" },
+        { "id": "entitlement_revoked", "surface": "worker", "evidence": "workers/entitlements.ts" }
+      ],
+      "needs_clarification": [
+        "Revenue-affecting but nobody named it. Does the business track downgrade completion rate?"
+      ],
+      "notes": "Candidate the customer did not declare. Propose it; do not assume it matters."
+    },
+    {
+      "id": "password_reset",
+      "name": "Password Reset",
+      "source": "discovered:code",
+      "confidence": "medium",
+      "steps": [
+        { "id": "reset_requested", "surface": "browser", "evidence": "src/auth/ResetRequest.tsx" },
+        { "id": "email_sent", "surface": "worker", "evidence": "workers/mail.ts" },
+        { "id": "password_changed", "surface": "node", "evidence": "app/api/auth/reset/route.ts" }
+      ],
+      "notes": "No correlation key found in handler signatures — would need one added."
+    }
+  ]
+}

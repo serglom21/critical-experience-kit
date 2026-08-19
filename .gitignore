@@ -1,0 +1,40 @@
+# Generated / install
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+
+# Customer/SE working files (gitignored by contract; never cwd dumps)
+ce-work/
+ce-work.zip
+.ce-observed.json
+/journeys.yaml
+/resolved.json
+/proposal.md
+/intake.md
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+credentials.json
+secrets.json
+.aws/
+.ssh/
+
+# OS / editor
+.DS_Store
+.idea/
+*.swp
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

@@ -1,0 +1,24 @@
+# Wheel contents. A non-editable install used to ship only cli.py, so every
+# stage 404'd — that is what made this unlistable as a customer package.
+include cli.py
+include pyproject.toml
+include requirements.txt
+include CUSTOMER.md
+include README.md
+include AGENTS.md
+include HANDOFF.md
+include GRAMMAR.md
+graft intake
+graft gap
+graft spec
+graft registry_gen
+graft eval
+graft warden-skill
+global-exclude test_*.py
+global-exclude */__pycache__/*
+global-exclude *.pyc
+prune eval/runtime/tasks
+prune eval/tasks
+prune gap/fixtures
+prune .venv
+prune ce-work

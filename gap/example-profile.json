@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "org": "acme-commerce",
+  "projects": [],
+  "stats_period": "30d",
+  "tier": "custom instrumentation present",
+  "headline": "Both layers are in place. The work is completeness and correctness, not adoption.",
+  "automatic": {
+    "families": {
+      "HTTP server (inbound requests)": 9120000,
+      "HTTP client (outbound calls)": 1842890,
+      "Database": 4210500,
+      "Browser resources": 905899,
+      "UI rendering": 23062785
+    },
+    "attribute_count": 6
+  },
+  "custom": {
+    "spans": [
+      {
+        "name": "checkout",
+        "count": 48210
+      },
+      {
+        "name": "checkout.shipping_submitted",
+        "count": 46900
+      },
+      {
+        "name": "checkout.payment_submitted",
+        "count": 44100
+      },
+      {
+        "name": "checkout.payment_authorize",
+        "count": 43800
+      }
+    ],
+    "attributes": [
+      "cart.currency",
+      "cart.item_count",
+      "cart.value",
+      "checkout.id",
+      "checkout.outcome",
+      "checkout.step",
+      "payment.method",
+      "upgrade.id",
+      "user.plan_tier"
+    ],
+    "share_of_span_volume": 0.0046
+  },
+  "unclassified_ops": {},
+  "namespace_collisions": [],
+  "recommendations": [
+    {
+      "priority": "critical",
+      "title": "Checkout: one rename, not new instrumentation",
+      "why": "expected `checkout.payment.authorize`, found `checkout.payment_authorize`. The step is already emitting; every query against the bound name returns empty.",
+      "ask": "Rename the span. Cheapest fix in the whole engagement."
+    },
+    {
+      "priority": "critical",
+      "title": "Checkout: funnel goes dark at payment_authorized",
+      "why": "Drop-off from these steps is being attributed to the last instrumented step, so the owning team never sees it.",
+      "ask": "Instrument the missing steps before adding any new journey."
+    },
+    {
+      "priority": "important",
+      "title": "Checkout: outcome is a string enum, not a boolean",
+      "why": "Sentry renders boolean attributes as the strings 'true'/'false', and a binary collapses failed, abandoned, and rejected into one bucket. Those three route to three different teams.",
+      "ask": "`checkout.outcome` is type `boolean` \u2014 fix the type."
+    },
+    {
+      "priority": "important",
+      "title": "Checkout: magnitude `cart.value` is numeric",
+      "why": "A value stringified as \"129.99\" cannot be aggregated \u2014 sum() and p50() silently return nothing useful. The instrumentation looks correct and produces no answer.",
+      "ask": "`cart.value` is type `string`, expected `number` \u2014 fix the type."
+    },
+    {
+      "priority": "important",
+      "title": "Declared journeys whose correlation key already exists",
+      "why": "The correlation key is present for: Subscription Upgrade. Only the spans are missing.",
+      "ask": "Sequence these next \u2014 they are the shortest path to a working funnel."
+    }
+  ]
+}

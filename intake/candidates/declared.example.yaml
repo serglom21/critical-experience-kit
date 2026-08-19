@@ -1,0 +1,146 @@
+# Customer-declared journeys. Authored by the SE from discovery notes.
+#
+# This is the ONLY required input. If a customer walks in already knowing which
+# flows matter, fill this file and go straight to spec generation — no code scan,
+# no telemetry pull. Discovery is an optional enrichment pass.
+#
+# Roles you can't fill yet: leave them out. The resolver reports them as missing
+# and carries them into the spec as [NEEDS CLARIFICATION]. Guessing is worse
+# than an open question.
+
+version: 1
+
+journeys:
+  # ---- Fully specified. Ready for spec generation. --------------------------
+  - id: checkout
+    name: Checkout
+    source: declared
+    confidence: high
+    business_impact: critical
+    owner: dana@customer.example
+    aliases: ["Checkout Flow", "Purchase Flow"]
+
+    correlation_key:
+      attribute: checkout.id
+      persists_across: [page_load, service]
+
+    # `span_name` is the implementation binding. Without it the convention
+    # applies (`<journey_id>` for step 1, `<journey_id>.<step_id>` after), which
+    # would derive `checkout.payment_authorized` — disagreeing with the span tree
+    # in ../../registry/spans/checkout.yaml. Two artifacts naming the same span
+    # differently is exactly the drift the Warden skill exists to catch, so the
+    # bindings are explicit here and match the registry exactly.
+    steps:
+      - id: cart_reviewed
+        span_name: checkout
+        surface: browser
+        impact: normal
+      - id: shipping_submitted
+        span_name: checkout.shipping_submitted
+        surface: browser
+        impact: normal
+      - id: payment_submitted
+        span_name: checkout.payment_submitted
+        surface: browser
+        impact: important
+      - id: payment_authorized
+        span_name: checkout.payment.authorize
+        surface: node
+        impact: critical
+      - id: inventory_reserved
+        span_name: checkout.inventory.reserve
+        surface: node
+        impact: important
+      - id: order_created
+        span_name: checkout.order.create
+        surface: node
+        impact: critical
+      - id: confirmation_viewed
+        span_name: checkout.confirmation_viewed
+        surface: browser
+        impact: important
+
+    outcome:
+      attribute: checkout.outcome
+      values: [completed, failed, abandoned, rejected]
+      success_values: [completed]
+      default_value: abandoned
+
+    failure_reason:
+      attribute: payment.decline_reason
+      bounded: true
+      known_values: [insuffic_funds, do_not_honor, 3ds_required, gateway_timeout]
+
+    magnitude:
+      - attribute: cart.value
+        type: double
+        step: cart_reviewed
+        unit: major_currency_unit
+      - attribute: order.value
+        type: double
+        step: order_created
+        unit: major_currency_unit
+
+    actor_segment:
+      - attribute: user.plan_tier
+        already_available: true
+      - attribute: payment.method
+
+    notes: >
+      Multi-page flow, so checkout.id must persist across page loads —
+      a browser navigation starts a new Sentry trace.
+
+  # ---- Declared, high impact, but nothing corroborates it. ------------------
+  # Expect status `declared_unconfirmed`. That is the finding worth raising,
+  # not a validation failure.
+  - id: refund_request
+    name: Refund Request
+    source: declared
+    confidence: high
+    business_impact: critical
+    owner: dana@customer.example
+
+    correlation_key:
+      attribute: refund.id
+      persists_across: [service, async_job]
+
+    steps:
+      - id: refund_requested
+        surface: browser
+      - id: refund_approved
+        surface: node
+      - id: refund_settled
+        surface: worker
+
+    notes: >
+      Named on the 2026-08-05 call as the top support-cost driver. Rare by
+      volume, expensive per instance — exactly the journey a frequency-ranked
+      discovery pass would bury.
+
+  # ---- Declared, but the outcome enum implies a role that isn't defined. ----
+  # Expect a conditional blocker: non-success values with no failure reason.
+  - id: subscription_upgrade
+    name: Subscription Upgrade
+    source: declared
+    confidence: medium
+    business_impact: important
+
+    correlation_key:
+      attribute: upgrade.id
+      persists_across: [service]
+
+    steps:
+      - id: plan_selected
+        surface: browser
+      - id: payment_authorized
+        surface: node
+      - id: entitlement_granted
+        surface: node
+
+    outcome:
+      attribute: upgrade.outcome
+      values: [completed, failed, abandoned]
+      success_values: [completed]
+
+    needs_clarification:
+      - "Is entitlement granted synchronously, or by an async worker that could fail after payment succeeds?"

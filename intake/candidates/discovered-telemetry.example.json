@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "_comment": [
+    "Simulated output of the telemetry discovery pass: trace variants and existing",
+    "spans in the customer's Sentry org.",
+    "",
+    "Telemetry is a RANKING signal, not a primary seed — it only ever reveals what",
+    "someone already chose to instrument, and instrumentation is the thing being",
+    "sold. `health_probe` below exists to prove the ranker behaves: 9.2M observed",
+    "instances, no human-assigned impact, and it must still sort below a refund",
+    "flow that runs a few hundred times a month."
+  ],
+  "journeys": [
+    {
+      "id": "upgrade_path",
+      "name": "Upgrade Path",
+      "source": "discovered:telemetry",
+      "confidence": "medium",
+      "observed_volume": 1420,
+      "correlation_key": {
+        "attribute": "upgrade.id"
+      },
+      "steps": [
+        { "id": "plan_selected", "surface": "browser", "evidence": "span: ui.action plan.select" },
+        { "id": "payment_authorized", "surface": "node", "evidence": "span: http.client POST /v1/payment_intents" }
+      ],
+      "notes": "Matches the declared `subscription_upgrade` on correlation key `upgrade.id` despite a different name — the resolver merges on that."
+    },
+    {
+      "id": "health_probe",
+      "name": "Health Probe",
+      "source": "discovered:telemetry",
+      "confidence": "high",
+      "observed_volume": 9200000,
+      "steps": [
+        { "id": "probe_received", "surface": "node", "evidence": "span: http.server GET /healthz" },
+        { "id": "deps_checked", "surface": "node", "evidence": "span: db SELECT 1" }
+      ],
+      "notes": "Highest-volume trace variant in the org and of zero business interest. Frequency is not importance. Left un-excluded on purpose: it proves the ranker does not lift it, and it's what a real first discovery pass looks like before a human triages."
+    },
+    {
+      "id": "static_asset_load",
+      "name": "Static Asset Load",
+      "source": "discovered:telemetry",
+      "confidence": "high",
+      "observed_volume": 1872000,
+      "excluded": true,
+      "excluded_reason": "resource.* spans from the CDN. No business journey, no owner, no action available.",
+      "steps": [
+        { "id": "asset_requested", "surface": "browser", "evidence": "span: resource.img" },
+        { "id": "asset_delivered", "surface": "browser", "evidence": "span: resource.css" }
+      ]
+    }
+  ]
+}

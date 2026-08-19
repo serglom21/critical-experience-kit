@@ -1,0 +1,38 @@
+# Critical Experience registry — manifest
+#
+# Verified against weaver_semconv/src/manifest.rs (DefinitionRegistryManifest).
+#   - File MUST be named `manifest.yaml`. `registry_manifest.yaml` still loads
+#     but emits a LegacyRegistryManifest warning.
+#   - `schema_url` is REQUIRED and must be http[s]://server[:port]/path/<version>.
+#     Registry name and version are DERIVED from it.
+#   - Deprecated: top-level `name` (silently ignored), `semconv_version`,
+#     `schema_base_url`. Do not use them.
+#   - `dependencies` currently allows a maximum of ONE entry (weaver#604).
+#   - Dependency sub-fields are `schema_url` (required) and `registry_path`.
+#     A dependency with only `name:` HARD FAILS. The example in Weaver's
+#     docs/define-your-own-telemetry-schema.md is stale on this point.
+#
+# Validate:  weaver registry check --future -r ./registry
+# Generate:  weaver registry generate --future -r ./registry markdown ./docs
+# Diff:      weaver registry diff --future -r ./registry --baseline-registry <prev>
+# Stats:     weaver registry stats --future -r ./registry --format json
+
+schema_url: https://sentry-se.example.com/schemas/critical-experience/0.1.0
+
+description: >
+  Critical Experience registry. Defines business-outcome span trees for
+  customer user journeys, so that journey definitions, customer-facing docs,
+  typed constants, and agent implementation prompts all derive from one
+  source of truth.
+
+  Scope note: attribute-level shape is validated by `weaver registry check`.
+  Journey COMPLETENESS ("did all 7 checkout spans arrive?") is NOT
+  expressible here — weaver live-check is sample-driven and has no notion of
+  a missing span. Completeness is checked separately against Sentry's span
+  query API. See BUILD-PLAN.md §0.
+
+stability: development
+
+dependencies:
+  - schema_url: https://opentelemetry.io/schemas/1.44.0
+    registry_path: https://github.com/open-telemetry/semantic-conventions@v1.44.0[model]

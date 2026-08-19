@@ -1,0 +1,63 @@
+{
+  "org": "acme-commerce",
+  "dataset": "spans",
+  "stats_period": "30d",
+  "traces_sample_rate": 0.25,
+  "_comment": [
+    "The SAME org, two months after the customer implemented checkout-SPEC.md.",
+    "Paired with observed-customer.example.json to exercise gap/diff.py.",
+    "",
+    "What they fixed (all nine requirements from the generated spec):",
+    "  - FR-001 renamed checkout.payment_authorize -> checkout.payment.authorize,",
+    "    which closed the mid-funnel dark segment",
+    "  - FR-002 added checkout.confirmation_viewed (the terminal span, so the",
+    "    CE-002 grade cap is released)",
+    "  - FR-003/004 checkout.outcome is now a string enum, not a boolean",
+    "  - FR-005 payment.decline_reason now exists",
+    "  - FR-006 order.value now exists, as a number",
+    "  - FR-007 cart.value is now a number, so sum() and p50() work",
+    "",
+    "And one REGRESSION, deliberately: checkout.shipping_submitted disappeared.",
+    "A refactor dropped it. This is the realistic failure mode — instrumentation",
+    "rots quietly, and a report that only celebrates the wins would bury it."
+  ],
+  "span_names": [
+    { "name": "checkout", "count": 51340 },
+    { "name": "checkout.payment_submitted", "count": 47200 },
+    { "name": "checkout.payment.authorize", "count": 46810 },
+    { "name": "checkout.inventory.reserve", "count": 44020 },
+    { "name": "checkout.order.create", "count": 41180 },
+    { "name": "checkout.confirmation_viewed", "count": 40560 },
+    { "name": "http.server", "count": 9640000 },
+    { "name": "http.client", "count": 1901220 },
+    { "name": "db.query", "count": 4408100 },
+    { "name": "resource.img", "count": 921450 },
+    { "name": "ui.react.mount", "count": 24118900 }
+  ],
+  "attributes": [
+    { "key": "checkout.id", "name": "checkout.id", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "checkout.step", "name": "checkout.step", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "checkout.outcome", "name": "checkout.outcome", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "checkout.failure_stage", "name": "checkout.failure_stage", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "cart.value", "name": "cart.value", "attributeType": "number", "attributeSource": { "source_type": "user" } },
+    { "key": "cart.item_count", "name": "cart.item_count", "attributeType": "number", "attributeSource": { "source_type": "user" } },
+    { "key": "cart.currency", "name": "cart.currency", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "order.id", "name": "order.id", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "order.value", "name": "order.value", "attributeType": "number", "attributeSource": { "source_type": "user" } },
+    { "key": "payment.decline_reason", "name": "payment.decline_reason", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "payment.method", "name": "payment.method", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "user.plan_tier", "name": "user.plan_tier", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "upgrade.id", "name": "upgrade.id", "attributeType": "string", "attributeSource": { "source_type": "user" } },
+    { "key": "http.request.method", "name": "http.request.method", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "http.response.status_code", "name": "http.response.status_code", "attributeType": "number", "attributeSource": { "source_type": "sentry" } },
+    { "key": "server.address", "name": "server.address", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "db.system", "name": "db.system", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "span.description", "name": "span.description", "attributeType": "string", "attributeSource": { "source_type": "sentry" } },
+    { "key": "user.id", "name": "user.id", "attributeType": "string", "attributeSource": { "source_type": "sentry" } }
+  ],
+  "example_traces": {
+    "checkout": "9a1f4c72e6b845d0839af1c2704e6b18",
+    "checkout.payment.authorize": "4c8e0b91a75d42f6ba09e3d18c6f2570",
+    "checkout.confirmation_viewed": "1d73ea50c9b84f27a6e0b41f88320d9c"
+  }
+}

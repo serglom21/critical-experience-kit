@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "critical-experience-kit"
+version = "0.1.0"
+description = "Generate, verify, and grade Sentry critical-experience instrumentation without writing the customer's code"
+# 3.9, not 3.10. PEP 604 unions (`str | None`) appear throughout, but every module
+# starts with `from __future__ import annotations`, so annotations are lazy strings
+# and never evaluated at runtime. Verified with `ast.parse(feature_version=(3, 9))`
+# across all modules plus an audit for 3.10-only stdlib APIs — both clean. The
+# original `>=3.10` was an assumption, not a measurement, and it locked out anyone
+# on a managed 3.9 install for no reason.
+requires-python = ">=3.9"
+license = { text = "Proprietary" }
+authors = [{ name = "Sergio Lombana", email = "sergio.lombana@sentry.io" }]
+
+# Deliberately near-zero. PyYAML is only needed for YAML journey files (JSON works
+# without it) and jsonschema only for full registry validation, which degrades to
+# structural checks when absent. Everything else is stdlib, so the kit runs on a
+# locked-down machine with no egress.
+dependencies = [
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+validate = ["jsonschema>=4.18"]
+dev = ["jsonschema>=4.18"]
+
+[project.scripts]
+ce = "cli:main"
+
+[project.urls]
+Documentation = "CUSTOMER.md"
+
+[tool.setuptools]
+# Stages stay standalone scripts (cli.py only dispatches). They must still be
+# *present* next to cli.py after a non-editable install — shipping only cli.py
+# made every stage 404, which is why this could not be sent to a customer.
+py-modules = ["cli"]
+include-package-data = true
+packages = [
+  "intake", "gap", "spec", "registry_gen", "eval", "eval.runtime", "warden_skill",
+]
+
+[tool.setuptools.package-dir]
+warden_skill = "warden-skill"
+
+[tool.setuptools.package-data]
+intake = ["schema/*.json"]
+warden_skill = ["**/*"]

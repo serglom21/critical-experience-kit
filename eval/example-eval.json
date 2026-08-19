@@ -1,0 +1,1384 @@
+{
+  "version": 1,
+  "label": "golden solutions",
+  "rubric": "/sessions/eager-kind-fermat/mnt/outputs/critical-experience-kit/spec/out/checkout-RUBRIC.json",
+  "aggregate": {
+    "runs": 6,
+    "clean_rate": 0.167,
+    "mean_score": 91.7,
+    "median_score": 89.3,
+    "stdev_score": 6.7,
+    "min_score": 85.7,
+    "max_score": 100.0,
+    "total_regressions": 1,
+    "by_check_kind": {
+      "span_renamed": {
+        "pass": 5,
+        "fail": 1,
+        "indeterminate": 0,
+        "fail_rate": 0.167
+      },
+      "no_deprecated_api": {
+        "pass": 5,
+        "fail": 1,
+        "indeterminate": 0,
+        "fail_rate": 0.167
+      },
+      "no_pii": {
+        "pass": 5,
+        "fail": 1,
+        "indeterminate": 0,
+        "fail_rate": 0.167
+      },
+      "attribute_numeric": {
+        "pass": 11,
+        "fail": 1,
+        "indeterminate": 0,
+        "fail_rate": 0.083
+      },
+      "span_present": {
+        "pass": 6,
+        "fail": 0,
+        "indeterminate": 0,
+        "fail_rate": 0.0
+      },
+      "attribute_not_boolean": {
+        "pass": 6,
+        "fail": 0,
+        "indeterminate": 0,
+        "fail_rate": 0.0
+      },
+      "literal_present": {
+        "pass": 6,
+        "fail": 0,
+        "indeterminate": 0,
+        "fail_rate": 0.0
+      },
+      "attribute_present": {
+        "pass": 6,
+        "fail": 0,
+        "indeterminate": 0,
+        "fail_rate": 0.0
+      }
+    },
+    "guard_failures_by_target": {
+      "checkout.id": 1
+    }
+  },
+  "runs": [
+    {
+      "version": 1,
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout"
+      },
+      "files_scanned": 4,
+      "score": 100.0,
+      "clean": false,
+      "requirements_total": 9,
+      "passed": 9,
+      "failed": 0,
+      "indeterminate": 0,
+      "ungradeable": 0,
+      "guards_total": 8,
+      "guard_failures": 1,
+      "guards": [
+        {
+          "id": "GD-001",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout` created"
+        },
+        {
+          "id": "GD-002",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.shipping_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.shipping_submitted` created"
+        },
+        {
+          "id": "GD-003",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.payment_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.payment_submitted` created"
+        },
+        {
+          "id": "GD-004",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.inventory.reserve",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.inventory.reserve` created"
+        },
+        {
+          "id": "GD-005",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.order.create",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.order.create` created"
+        },
+        {
+          "id": "GD-006",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.id",
+          "impact": "important",
+          "status": "fail",
+          "detail": "`checkout.id` is set, but so is the near-miss `checkoutId` \u2014 spans using the wrong key drop out of every journey query with no error"
+        },
+        {
+          "id": "GD-007",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.outcome",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.outcome` set 2\u00d7"
+        },
+        {
+          "id": "GD-008",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "cart.value",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`cart.value` set 1\u00d7"
+        }
+      ],
+      "regressions": [
+        {
+          "id": "GD-006",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.id",
+          "impact": "important",
+          "status": "fail",
+          "detail": "`checkout.id` is set, but so is the near-miss `checkoutId` \u2014 spans using the wrong key drop out of every journey query with no error"
+        }
+      ],
+      "results": [
+        {
+          "id": "FR-001",
+          "rule": "CE-013",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "span_renamed",
+          "detail": "renamed to `checkout.payment.authorize`",
+          "text": "Rename the existing span so it matches the contract exactly. expected `checkout.payment.authorize`, found `checkout.payment_authorize`. Do **not** add a new span \u2014 the instrumentation already exists and is emitting; only the name is wrong. This single change also satisfies the step requirement for that span."
+        },
+        {
+          "id": "FR-002",
+          "rule": "CE-003",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "span_present",
+          "detail": "span `checkout.confirmation_viewed` created",
+          "text": "A span named `checkout.confirmation_viewed` MUST be created in the browser runtime for step `confirmation_viewed`. Create it as a child of the surrounding span."
+        },
+        {
+          "id": "FR-003",
+          "rule": "CE-007",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_not_boolean",
+          "detail": "`checkout.outcome` uses declared values: completed, abandoned",
+          "text": "`checkout.outcome` MUST be a string enum (completed | failed | abandoned | rejected), not a boolean. Sentry renders boolean attributes as the strings 'true'/'false', so the current value cannot express more than two states."
+        },
+        {
+          "id": "FR-004",
+          "rule": "CE-006",
+          "status": "pass",
+          "impact": "normal",
+          "weight": 20,
+          "check": "literal_present",
+          "detail": "literal `abandoned` present",
+          "text": "`checkout.outcome` MUST be initialised to `abandoned` when the journey starts and overwritten on a terminal event."
+        },
+        {
+          "id": "FR-005",
+          "rule": "CE-008",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_present",
+          "detail": "`payment.decline_reason` set 1\u00d7",
+          "text": "When the outcome is not a success value, the span MUST carry `payment.decline_reason` with the provider's or system's **coded** reason. Known values: insuffic_funds, do_not_honor, 3ds_required, gateway_timeout. Never a free-text message, never a raw upstream payload."
+        },
+        {
+          "id": "FR-006",
+          "rule": "CE-009",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`order.value` not stringified (value is `order.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "The span for step `order_created` MUST carry `order.value` as a **double** (a JavaScript number, not a string)."
+        },
+        {
+          "id": "FR-007",
+          "rule": "CE-010",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`cart.value` not stringified (value is `cart.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "`cart.value` is type `string`, expected `number`. It MUST be emitted as a number. A stringified value cannot be aggregated \u2014 `sum()` and `p50()` return nothing useful while the code looks correct."
+        },
+        {
+          "id": "FR-008",
+          "rule": "-",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "no_deprecated_api",
+          "detail": "no removed or deprecated Sentry API used",
+          "text": "Existing `Sentry.init()` options, sampling rates, and unrelated instrumentation MUST NOT be modified."
+        },
+        {
+          "id": "FR-009",
+          "rule": "-",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "no_pii",
+          "detail": "no PII-shaped keys or values on spans",
+          "text": "No PII, card data, token, or raw provider payload may appear in any span name, `op`, or attribute."
+        }
+      ],
+      "observed": {
+        "span_names": [
+          "checkout",
+          "checkout.confirmation_viewed",
+          "checkout.inventory.reserve",
+          "checkout.order.create",
+          "checkout.payment.authorize",
+          "checkout.payment_submitted",
+          "checkout.shipping_submitted"
+        ],
+        "attributes": [
+          "cart.currency",
+          "cart.item_count",
+          "cart.value",
+          "checkout.id",
+          "checkout.outcome",
+          "checkout.step",
+          "checkoutId",
+          "inventory.outcome",
+          "order.id",
+          "order.value",
+          "payment.decline_reason",
+          "payment.method",
+          "payment.outcome",
+          "payment.provider",
+          "user.plan_tier"
+        ]
+      },
+      "task": "checkout-js",
+      "source": "attribute-typo"
+    },
+    {
+      "version": 1,
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout"
+      },
+      "files_scanned": 4,
+      "score": 100.0,
+      "clean": true,
+      "requirements_total": 9,
+      "passed": 9,
+      "failed": 0,
+      "indeterminate": 0,
+      "ungradeable": 0,
+      "guards_total": 8,
+      "guard_failures": 0,
+      "guards": [
+        {
+          "id": "GD-001",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout` created"
+        },
+        {
+          "id": "GD-002",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.shipping_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.shipping_submitted` created"
+        },
+        {
+          "id": "GD-003",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.payment_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.payment_submitted` created"
+        },
+        {
+          "id": "GD-004",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.inventory.reserve",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.inventory.reserve` created"
+        },
+        {
+          "id": "GD-005",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.order.create",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.order.create` created"
+        },
+        {
+          "id": "GD-006",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.id",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.id` set 7\u00d7"
+        },
+        {
+          "id": "GD-007",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.outcome",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.outcome` set 2\u00d7"
+        },
+        {
+          "id": "GD-008",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "cart.value",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`cart.value` set 1\u00d7"
+        }
+      ],
+      "regressions": [],
+      "results": [
+        {
+          "id": "FR-001",
+          "rule": "CE-013",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "span_renamed",
+          "detail": "renamed to `checkout.payment.authorize`",
+          "text": "Rename the existing span so it matches the contract exactly. expected `checkout.payment.authorize`, found `checkout.payment_authorize`. Do **not** add a new span \u2014 the instrumentation already exists and is emitting; only the name is wrong. This single change also satisfies the step requirement for that span."
+        },
+        {
+          "id": "FR-002",
+          "rule": "CE-003",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "span_present",
+          "detail": "span `checkout.confirmation_viewed` created",
+          "text": "A span named `checkout.confirmation_viewed` MUST be created in the browser runtime for step `confirmation_viewed`. Create it as a child of the surrounding span."
+        },
+        {
+          "id": "FR-003",
+          "rule": "CE-007",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_not_boolean",
+          "detail": "`checkout.outcome` uses declared values: completed, abandoned",
+          "text": "`checkout.outcome` MUST be a string enum (completed | failed | abandoned | rejected), not a boolean. Sentry renders boolean attributes as the strings 'true'/'false', so the current value cannot express more than two states."
+        },
+        {
+          "id": "FR-004",
+          "rule": "CE-006",
+          "status": "pass",
+          "impact": "normal",
+          "weight": 20,
+          "check": "literal_present",
+          "detail": "literal `abandoned` present",
+          "text": "`checkout.outcome` MUST be initialised to `abandoned` when the journey starts and overwritten on a terminal event."
+        },
+        {
+          "id": "FR-005",
+          "rule": "CE-008",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_present",
+          "detail": "`payment.decline_reason` set 1\u00d7",
+          "text": "When the outcome is not a success value, the span MUST carry `payment.decline_reason` with the provider's or system's **coded** reason. Known values: insuffic_funds, do_not_honor, 3ds_required, gateway_timeout. Never a free-text message, never a raw upstream payload."
+        },
+        {
+          "id": "FR-006",
+          "rule": "CE-009",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`order.value` not stringified (value is `order.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "The span for step `order_created` MUST carry `order.value` as a **double** (a JavaScript number, not a string)."
+        },
+        {
+          "id": "FR-007",
+          "rule": "CE-010",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`cart.value` not stringified (value is `cart.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "`cart.value` is type `string`, expected `number`. It MUST be emitted as a number. A stringified value cannot be aggregated \u2014 `sum()` and `p50()` return nothing useful while the code looks correct."
+        },
+        {
+          "id": "FR-008",
+          "rule": "-",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "no_deprecated_api",
+          "detail": "no removed or deprecated Sentry API used",
+          "text": "Existing `Sentry.init()` options, sampling rates, and unrelated instrumentation MUST NOT be modified."
+        },
+        {
+          "id": "FR-009",
+          "rule": "-",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "no_pii",
+          "detail": "no PII-shaped keys or values on spans",
+          "text": "No PII, card data, token, or raw provider payload may appear in any span name, `op`, or attribute."
+        }
+      ],
+      "observed": {
+        "span_names": [
+          "checkout",
+          "checkout.confirmation_viewed",
+          "checkout.inventory.reserve",
+          "checkout.order.create",
+          "checkout.payment.authorize",
+          "checkout.payment_submitted",
+          "checkout.shipping_submitted"
+        ],
+        "attributes": [
+          "cart.currency",
+          "cart.item_count",
+          "cart.value",
+          "checkout.id",
+          "checkout.outcome",
+          "checkout.step",
+          "inventory.outcome",
+          "order.id",
+          "order.value",
+          "payment.decline_reason",
+          "payment.method",
+          "payment.outcome",
+          "payment.provider",
+          "user.plan_tier"
+        ]
+      },
+      "task": "checkout-js",
+      "source": "correct"
+    },
+    {
+      "version": 1,
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout"
+      },
+      "files_scanned": 4,
+      "score": 89.3,
+      "clean": false,
+      "requirements_total": 9,
+      "passed": 8,
+      "failed": 1,
+      "indeterminate": 0,
+      "ungradeable": 0,
+      "guards_total": 8,
+      "guard_failures": 0,
+      "guards": [
+        {
+          "id": "GD-001",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout` created"
+        },
+        {
+          "id": "GD-002",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.shipping_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.shipping_submitted` created"
+        },
+        {
+          "id": "GD-003",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.payment_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.payment_submitted` created"
+        },
+        {
+          "id": "GD-004",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.inventory.reserve",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.inventory.reserve` created"
+        },
+        {
+          "id": "GD-005",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.order.create",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.order.create` created"
+        },
+        {
+          "id": "GD-006",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.id",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.id` set 7\u00d7"
+        },
+        {
+          "id": "GD-007",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.outcome",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.outcome` set 2\u00d7"
+        },
+        {
+          "id": "GD-008",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "cart.value",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`cart.value` set 1\u00d7"
+        }
+      ],
+      "regressions": [
+        {
+          "id": "FR-008",
+          "rule": "-",
+          "status": "fail",
+          "impact": "important",
+          "weight": 30,
+          "check": "no_deprecated_api",
+          "detail": "uses `.setData(` in src/orders/create.ts",
+          "text": "Existing `Sentry.init()` options, sampling rates, and unrelated instrumentation MUST NOT be modified."
+        }
+      ],
+      "results": [
+        {
+          "id": "FR-001",
+          "rule": "CE-013",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "span_renamed",
+          "detail": "renamed to `checkout.payment.authorize`",
+          "text": "Rename the existing span so it matches the contract exactly. expected `checkout.payment.authorize`, found `checkout.payment_authorize`. Do **not** add a new span \u2014 the instrumentation already exists and is emitting; only the name is wrong. This single change also satisfies the step requirement for that span."
+        },
+        {
+          "id": "FR-002",
+          "rule": "CE-003",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "span_present",
+          "detail": "span `checkout.confirmation_viewed` created",
+          "text": "A span named `checkout.confirmation_viewed` MUST be created in the browser runtime for step `confirmation_viewed`. Create it as a child of the surrounding span."
+        },
+        {
+          "id": "FR-003",
+          "rule": "CE-007",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_not_boolean",
+          "detail": "`checkout.outcome` uses declared values: completed, abandoned",
+          "text": "`checkout.outcome` MUST be a string enum (completed | failed | abandoned | rejected), not a boolean. Sentry renders boolean attributes as the strings 'true'/'false', so the current value cannot express more than two states."
+        },
+        {
+          "id": "FR-004",
+          "rule": "CE-006",
+          "status": "pass",
+          "impact": "normal",
+          "weight": 20,
+          "check": "literal_present",
+          "detail": "literal `abandoned` present",
+          "text": "`checkout.outcome` MUST be initialised to `abandoned` when the journey starts and overwritten on a terminal event."
+        },
+        {
+          "id": "FR-005",
+          "rule": "CE-008",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_present",
+          "detail": "`payment.decline_reason` set 1\u00d7",
+          "text": "When the outcome is not a success value, the span MUST carry `payment.decline_reason` with the provider's or system's **coded** reason. Known values: insuffic_funds, do_not_honor, 3ds_required, gateway_timeout. Never a free-text message, never a raw upstream payload."
+        },
+        {
+          "id": "FR-006",
+          "rule": "CE-009",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`order.value` not stringified (value is `order.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "The span for step `order_created` MUST carry `order.value` as a **double** (a JavaScript number, not a string)."
+        },
+        {
+          "id": "FR-007",
+          "rule": "CE-010",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`cart.value` not stringified (value is `cart.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "`cart.value` is type `string`, expected `number`. It MUST be emitted as a number. A stringified value cannot be aggregated \u2014 `sum()` and `p50()` return nothing useful while the code looks correct."
+        },
+        {
+          "id": "FR-008",
+          "rule": "-",
+          "status": "fail",
+          "impact": "important",
+          "weight": 30,
+          "check": "no_deprecated_api",
+          "detail": "uses `.setData(` in src/orders/create.ts",
+          "text": "Existing `Sentry.init()` options, sampling rates, and unrelated instrumentation MUST NOT be modified."
+        },
+        {
+          "id": "FR-009",
+          "rule": "-",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "no_pii",
+          "detail": "no PII-shaped keys or values on spans",
+          "text": "No PII, card data, token, or raw provider payload may appear in any span name, `op`, or attribute."
+        }
+      ],
+      "observed": {
+        "span_names": [
+          "checkout",
+          "checkout.confirmation_viewed",
+          "checkout.inventory.reserve",
+          "checkout.order.create",
+          "checkout.payment.authorize",
+          "checkout.payment_submitted",
+          "checkout.shipping_submitted"
+        ],
+        "attributes": [
+          "cart.currency",
+          "cart.item_count",
+          "cart.value",
+          "checkout.id",
+          "checkout.outcome",
+          "checkout.step",
+          "inventory.outcome",
+          "order.id",
+          "order.value",
+          "payment.decline_reason",
+          "payment.method",
+          "payment.outcome",
+          "payment.provider",
+          "user.plan_tier"
+        ]
+      },
+      "task": "checkout-js",
+      "source": "deprecated-api"
+    },
+    {
+      "version": 1,
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout"
+      },
+      "files_scanned": 4,
+      "score": 85.7,
+      "clean": false,
+      "requirements_total": 9,
+      "passed": 8,
+      "failed": 1,
+      "indeterminate": 0,
+      "ungradeable": 0,
+      "guards_total": 8,
+      "guard_failures": 0,
+      "guards": [
+        {
+          "id": "GD-001",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout` created"
+        },
+        {
+          "id": "GD-002",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.shipping_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.shipping_submitted` created"
+        },
+        {
+          "id": "GD-003",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.payment_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.payment_submitted` created"
+        },
+        {
+          "id": "GD-004",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.inventory.reserve",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.inventory.reserve` created"
+        },
+        {
+          "id": "GD-005",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.order.create",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.order.create` created"
+        },
+        {
+          "id": "GD-006",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.id",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.id` set 7\u00d7"
+        },
+        {
+          "id": "GD-007",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.outcome",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.outcome` set 2\u00d7"
+        },
+        {
+          "id": "GD-008",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "cart.value",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`cart.value` set 1\u00d7"
+        }
+      ],
+      "regressions": [],
+      "results": [
+        {
+          "id": "FR-001",
+          "rule": "CE-013",
+          "status": "fail",
+          "impact": "critical",
+          "weight": 40,
+          "check": "span_renamed",
+          "detail": "both `checkout.payment_authorize` and `checkout.payment.authorize` exist \u2014 the span was duplicated rather than renamed",
+          "text": "Rename the existing span so it matches the contract exactly. expected `checkout.payment.authorize`, found `checkout.payment_authorize`. Do **not** add a new span \u2014 the instrumentation already exists and is emitting; only the name is wrong. This single change also satisfies the step requirement for that span."
+        },
+        {
+          "id": "FR-002",
+          "rule": "CE-003",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "span_present",
+          "detail": "span `checkout.confirmation_viewed` created",
+          "text": "A span named `checkout.confirmation_viewed` MUST be created in the browser runtime for step `confirmation_viewed`. Create it as a child of the surrounding span."
+        },
+        {
+          "id": "FR-003",
+          "rule": "CE-007",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_not_boolean",
+          "detail": "`checkout.outcome` uses declared values: completed, abandoned",
+          "text": "`checkout.outcome` MUST be a string enum (completed | failed | abandoned | rejected), not a boolean. Sentry renders boolean attributes as the strings 'true'/'false', so the current value cannot express more than two states."
+        },
+        {
+          "id": "FR-004",
+          "rule": "CE-006",
+          "status": "pass",
+          "impact": "normal",
+          "weight": 20,
+          "check": "literal_present",
+          "detail": "literal `abandoned` present",
+          "text": "`checkout.outcome` MUST be initialised to `abandoned` when the journey starts and overwritten on a terminal event."
+        },
+        {
+          "id": "FR-005",
+          "rule": "CE-008",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_present",
+          "detail": "`payment.decline_reason` set 1\u00d7",
+          "text": "When the outcome is not a success value, the span MUST carry `payment.decline_reason` with the provider's or system's **coded** reason. Known values: insuffic_funds, do_not_honor, 3ds_required, gateway_timeout. Never a free-text message, never a raw upstream payload."
+        },
+        {
+          "id": "FR-006",
+          "rule": "CE-009",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`order.value` not stringified (value is `order.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "The span for step `order_created` MUST carry `order.value` as a **double** (a JavaScript number, not a string)."
+        },
+        {
+          "id": "FR-007",
+          "rule": "CE-010",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`cart.value` not stringified (value is `cart.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "`cart.value` is type `string`, expected `number`. It MUST be emitted as a number. A stringified value cannot be aggregated \u2014 `sum()` and `p50()` return nothing useful while the code looks correct."
+        },
+        {
+          "id": "FR-008",
+          "rule": "-",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "no_deprecated_api",
+          "detail": "no removed or deprecated Sentry API used",
+          "text": "Existing `Sentry.init()` options, sampling rates, and unrelated instrumentation MUST NOT be modified."
+        },
+        {
+          "id": "FR-009",
+          "rule": "-",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "no_pii",
+          "detail": "no PII-shaped keys or values on spans",
+          "text": "No PII, card data, token, or raw provider payload may appear in any span name, `op`, or attribute."
+        }
+      ],
+      "observed": {
+        "span_names": [
+          "checkout",
+          "checkout.confirmation_viewed",
+          "checkout.inventory.reserve",
+          "checkout.order.create",
+          "checkout.payment.authorize",
+          "checkout.payment_authorize",
+          "checkout.payment_submitted",
+          "checkout.shipping_submitted"
+        ],
+        "attributes": [
+          "cart.currency",
+          "cart.item_count",
+          "cart.value",
+          "checkout.id",
+          "checkout.outcome",
+          "checkout.step",
+          "inventory.outcome",
+          "order.id",
+          "order.value",
+          "payment.decline_reason",
+          "payment.method",
+          "payment.outcome",
+          "payment.provider",
+          "user.plan_tier"
+        ]
+      },
+      "task": "checkout-js",
+      "source": "duplicated-span"
+    },
+    {
+      "version": 1,
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout"
+      },
+      "files_scanned": 4,
+      "score": 89.3,
+      "clean": false,
+      "requirements_total": 9,
+      "passed": 8,
+      "failed": 1,
+      "indeterminate": 0,
+      "ungradeable": 0,
+      "guards_total": 8,
+      "guard_failures": 0,
+      "guards": [
+        {
+          "id": "GD-001",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout` created"
+        },
+        {
+          "id": "GD-002",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.shipping_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.shipping_submitted` created"
+        },
+        {
+          "id": "GD-003",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.payment_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.payment_submitted` created"
+        },
+        {
+          "id": "GD-004",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.inventory.reserve",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.inventory.reserve` created"
+        },
+        {
+          "id": "GD-005",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.order.create",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.order.create` created"
+        },
+        {
+          "id": "GD-006",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.id",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.id` set 7\u00d7"
+        },
+        {
+          "id": "GD-007",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.outcome",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.outcome` set 2\u00d7"
+        },
+        {
+          "id": "GD-008",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "cart.value",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`cart.value` set 1\u00d7"
+        }
+      ],
+      "regressions": [],
+      "results": [
+        {
+          "id": "FR-001",
+          "rule": "CE-013",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "span_renamed",
+          "detail": "renamed to `checkout.payment.authorize`",
+          "text": "Rename the existing span so it matches the contract exactly. expected `checkout.payment.authorize`, found `checkout.payment_authorize`. Do **not** add a new span \u2014 the instrumentation already exists and is emitting; only the name is wrong. This single change also satisfies the step requirement for that span."
+        },
+        {
+          "id": "FR-002",
+          "rule": "CE-003",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "span_present",
+          "detail": "span `checkout.confirmation_viewed` created",
+          "text": "A span named `checkout.confirmation_viewed` MUST be created in the browser runtime for step `confirmation_viewed`. Create it as a child of the surrounding span."
+        },
+        {
+          "id": "FR-003",
+          "rule": "CE-007",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_not_boolean",
+          "detail": "`checkout.outcome` uses declared values: completed, abandoned",
+          "text": "`checkout.outcome` MUST be a string enum (completed | failed | abandoned | rejected), not a boolean. Sentry renders boolean attributes as the strings 'true'/'false', so the current value cannot express more than two states."
+        },
+        {
+          "id": "FR-004",
+          "rule": "CE-006",
+          "status": "pass",
+          "impact": "normal",
+          "weight": 20,
+          "check": "literal_present",
+          "detail": "literal `abandoned` present",
+          "text": "`checkout.outcome` MUST be initialised to `abandoned` when the journey starts and overwritten on a terminal event."
+        },
+        {
+          "id": "FR-005",
+          "rule": "CE-008",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_present",
+          "detail": "`payment.decline_reason` set 1\u00d7",
+          "text": "When the outcome is not a success value, the span MUST carry `payment.decline_reason` with the provider's or system's **coded** reason. Known values: insuffic_funds, do_not_honor, 3ds_required, gateway_timeout. Never a free-text message, never a raw upstream payload."
+        },
+        {
+          "id": "FR-006",
+          "rule": "CE-009",
+          "status": "fail",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`order.value` set to a string \u2014 cannot be aggregated",
+          "text": "The span for step `order_created` MUST carry `order.value` as a **double** (a JavaScript number, not a string)."
+        },
+        {
+          "id": "FR-007",
+          "rule": "CE-010",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`cart.value` not stringified (value is `cart.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "`cart.value` is type `string`, expected `number`. It MUST be emitted as a number. A stringified value cannot be aggregated \u2014 `sum()` and `p50()` return nothing useful while the code looks correct."
+        },
+        {
+          "id": "FR-008",
+          "rule": "-",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "no_deprecated_api",
+          "detail": "no removed or deprecated Sentry API used",
+          "text": "Existing `Sentry.init()` options, sampling rates, and unrelated instrumentation MUST NOT be modified."
+        },
+        {
+          "id": "FR-009",
+          "rule": "-",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "no_pii",
+          "detail": "no PII-shaped keys or values on spans",
+          "text": "No PII, card data, token, or raw provider payload may appear in any span name, `op`, or attribute."
+        }
+      ],
+      "observed": {
+        "span_names": [
+          "checkout",
+          "checkout.confirmation_viewed",
+          "checkout.inventory.reserve",
+          "checkout.order.create",
+          "checkout.payment.authorize",
+          "checkout.payment_submitted",
+          "checkout.shipping_submitted"
+        ],
+        "attributes": [
+          "cart.currency",
+          "cart.item_count",
+          "cart.value",
+          "checkout.id",
+          "checkout.outcome",
+          "checkout.step",
+          "inventory.outcome",
+          "order.id",
+          "order.value",
+          "payment.decline_reason",
+          "payment.method",
+          "payment.outcome",
+          "payment.provider",
+          "user.plan_tier"
+        ]
+      },
+      "task": "checkout-js",
+      "source": "indeterminate"
+    },
+    {
+      "version": 1,
+      "journey": {
+        "id": "checkout",
+        "name": "Checkout"
+      },
+      "files_scanned": 4,
+      "score": 85.7,
+      "clean": false,
+      "requirements_total": 9,
+      "passed": 8,
+      "failed": 1,
+      "indeterminate": 0,
+      "ungradeable": 0,
+      "guards_total": 8,
+      "guard_failures": 0,
+      "guards": [
+        {
+          "id": "GD-001",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout` created"
+        },
+        {
+          "id": "GD-002",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.shipping_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.shipping_submitted` created"
+        },
+        {
+          "id": "GD-003",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.payment_submitted",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.payment_submitted` created"
+        },
+        {
+          "id": "GD-004",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.inventory.reserve",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.inventory.reserve` created"
+        },
+        {
+          "id": "GD-005",
+          "why": "already instrumented before this work",
+          "check": "span_present",
+          "target": "checkout.order.create",
+          "impact": "critical",
+          "status": "pass",
+          "detail": "span `checkout.order.create` created"
+        },
+        {
+          "id": "GD-006",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.id",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.id` set 7\u00d7"
+        },
+        {
+          "id": "GD-007",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "checkout.outcome",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`checkout.outcome` set 2\u00d7"
+        },
+        {
+          "id": "GD-008",
+          "why": "attribute already present in the org before this work",
+          "check": "attribute_key_exact",
+          "target": "cart.value",
+          "impact": "important",
+          "status": "pass",
+          "detail": "`cart.value` set 1\u00d7"
+        }
+      ],
+      "regressions": [
+        {
+          "id": "FR-009",
+          "rule": "-",
+          "status": "fail",
+          "impact": "critical",
+          "weight": 40,
+          "check": "no_pii",
+          "detail": "attribute key `user.email`; value of `user.email`: user.email; attribute key `card.number`",
+          "text": "No PII, card data, token, or raw provider payload may appear in any span name, `op`, or attribute."
+        }
+      ],
+      "results": [
+        {
+          "id": "FR-001",
+          "rule": "CE-013",
+          "status": "pass",
+          "impact": "critical",
+          "weight": 40,
+          "check": "span_renamed",
+          "detail": "renamed to `checkout.payment.authorize`",
+          "text": "Rename the existing span so it matches the contract exactly. expected `checkout.payment.authorize`, found `checkout.payment_authorize`. Do **not** add a new span \u2014 the instrumentation already exists and is emitting; only the name is wrong. This single change also satisfies the step requirement for that span."
+        },
+        {
+          "id": "FR-002",
+          "rule": "CE-003",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "span_present",
+          "detail": "span `checkout.confirmation_viewed` created",
+          "text": "A span named `checkout.confirmation_viewed` MUST be created in the browser runtime for step `confirmation_viewed`. Create it as a child of the surrounding span."
+        },
+        {
+          "id": "FR-003",
+          "rule": "CE-007",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_not_boolean",
+          "detail": "`checkout.outcome` uses declared values: completed, abandoned",
+          "text": "`checkout.outcome` MUST be a string enum (completed | failed | abandoned | rejected), not a boolean. Sentry renders boolean attributes as the strings 'true'/'false', so the current value cannot express more than two states."
+        },
+        {
+          "id": "FR-004",
+          "rule": "CE-006",
+          "status": "pass",
+          "impact": "normal",
+          "weight": 20,
+          "check": "literal_present",
+          "detail": "literal `abandoned` present",
+          "text": "`checkout.outcome` MUST be initialised to `abandoned` when the journey starts and overwritten on a terminal event."
+        },
+        {
+          "id": "FR-005",
+          "rule": "CE-008",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_present",
+          "detail": "`payment.decline_reason` set 1\u00d7",
+          "text": "When the outcome is not a success value, the span MUST carry `payment.decline_reason` with the provider's or system's **coded** reason. Known values: insuffic_funds, do_not_honor, 3ds_required, gateway_timeout. Never a free-text message, never a raw upstream payload."
+        },
+        {
+          "id": "FR-006",
+          "rule": "CE-009",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`order.value` not stringified (value is `order.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "The span for step `order_created` MUST carry `order.value` as a **double** (a JavaScript number, not a string)."
+        },
+        {
+          "id": "FR-007",
+          "rule": "CE-010",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "attribute_numeric",
+          "detail": "`cart.value` not stringified (value is `cart.total`) \u2014 type unconfirmable from source, verify in telemetry",
+          "text": "`cart.value` is type `string`, expected `number`. It MUST be emitted as a number. A stringified value cannot be aggregated \u2014 `sum()` and `p50()` return nothing useful while the code looks correct."
+        },
+        {
+          "id": "FR-008",
+          "rule": "-",
+          "status": "pass",
+          "impact": "important",
+          "weight": 30,
+          "check": "no_deprecated_api",
+          "detail": "no removed or deprecated Sentry API used",
+          "text": "Existing `Sentry.init()` options, sampling rates, and unrelated instrumentation MUST NOT be modified."
+        },
+        {
+          "id": "FR-009",
+          "rule": "-",
+          "status": "fail",
+          "impact": "critical",
+          "weight": 40,
+          "check": "no_pii",
+          "detail": "attribute key `user.email`; value of `user.email`: user.email; attribute key `card.number`",
+          "text": "No PII, card data, token, or raw provider payload may appear in any span name, `op`, or attribute."
+        }
+      ],
+      "observed": {
+        "span_names": [
+          "checkout",
+          "checkout.confirmation_viewed",
+          "checkout.inventory.reserve",
+          "checkout.order.create",
+          "checkout.payment.authorize",
+          "checkout.payment_submitted",
+          "checkout.shipping_submitted"
+        ],
+        "attributes": [
+          "card.number",
+          "cart.currency",
+          "cart.item_count",
+          "cart.value",
+          "checkout.id",
+          "checkout.outcome",
+          "checkout.step",
+          "inventory.outcome",
+          "order.id",
+          "order.value",
+          "payment.decline_reason",
+          "payment.method",
+          "payment.outcome",
+          "payment.provider",
+          "user.email",
+          "user.plan_tier"
+        ]
+      },
+      "task": "checkout-js",
+      "source": "pii"
+    }
+  ]
+}

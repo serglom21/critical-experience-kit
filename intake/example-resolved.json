@@ -1,0 +1,526 @@
+{
+  "version": 1,
+  "summary": {
+    "total": 6,
+    "excluded": 1,
+    "spec_ready": 1,
+    "by_status": {
+      "corroborated": 2,
+      "declared_unconfirmed": 1,
+      "proposed": 3
+    }
+  },
+  "journeys": [
+    {
+      "id": "checkout",
+      "name": "Checkout",
+      "status": "corroborated",
+      "excluded": false,
+      "excluded_reason": null,
+      "sources": [
+        "declared",
+        "discovered:code"
+      ],
+      "confidence": "high",
+      "business_impact": "critical",
+      "observed_volume": null,
+      "owner": "dana@customer.example",
+      "spec_ready": true,
+      "blockers": [],
+      "undeclared_steps": [],
+      "filled_roles": [
+        "name",
+        "correlation_key",
+        "steps",
+        "outcome",
+        "failure_reason",
+        "magnitude",
+        "actor_segment"
+      ],
+      "missing_roles": [],
+      "needs_clarification": [],
+      "roles": {
+        "name": "Checkout",
+        "correlation_key": {
+          "attribute": "checkout.id",
+          "persists_across": [
+            "page_load",
+            "service"
+          ]
+        },
+        "steps": [
+          {
+            "id": "cart_reviewed",
+            "span_name": "checkout",
+            "surface": "browser",
+            "impact": "normal"
+          },
+          {
+            "id": "shipping_submitted",
+            "span_name": "checkout.shipping_submitted",
+            "surface": "browser",
+            "impact": "normal"
+          },
+          {
+            "id": "payment_submitted",
+            "span_name": "checkout.payment_submitted",
+            "surface": "browser",
+            "impact": "important"
+          },
+          {
+            "id": "payment_authorized",
+            "span_name": "checkout.payment.authorize",
+            "surface": "node",
+            "impact": "critical"
+          },
+          {
+            "id": "inventory_reserved",
+            "span_name": "checkout.inventory.reserve",
+            "surface": "node",
+            "impact": "important"
+          },
+          {
+            "id": "order_created",
+            "span_name": "checkout.order.create",
+            "surface": "node",
+            "impact": "critical"
+          },
+          {
+            "id": "confirmation_viewed",
+            "span_name": "checkout.confirmation_viewed",
+            "surface": "browser",
+            "impact": "important"
+          }
+        ],
+        "outcome": {
+          "attribute": "checkout.outcome",
+          "values": [
+            "completed",
+            "failed",
+            "abandoned",
+            "rejected"
+          ],
+          "success_values": [
+            "completed"
+          ],
+          "default_value": "abandoned"
+        },
+        "failure_reason": {
+          "attribute": "payment.decline_reason",
+          "bounded": true,
+          "known_values": [
+            "insuffic_funds",
+            "do_not_honor",
+            "3ds_required",
+            "gateway_timeout"
+          ]
+        },
+        "magnitude": [
+          {
+            "attribute": "cart.value",
+            "type": "double",
+            "step": "cart_reviewed",
+            "unit": "major_currency_unit"
+          },
+          {
+            "attribute": "order.value",
+            "type": "double",
+            "step": "order_created",
+            "unit": "major_currency_unit"
+          }
+        ],
+        "actor_segment": [
+          {
+            "attribute": "user.plan_tier",
+            "already_available": true
+          },
+          {
+            "attribute": "payment.method"
+          }
+        ]
+      }
+    },
+    {
+      "id": "refund_request",
+      "name": "Refund Request",
+      "status": "declared_unconfirmed",
+      "excluded": false,
+      "excluded_reason": null,
+      "sources": [
+        "declared"
+      ],
+      "confidence": "high",
+      "business_impact": "critical",
+      "observed_volume": null,
+      "owner": "dana@customer.example",
+      "spec_ready": false,
+      "blockers": [
+        "role 4 outcome not defined"
+      ],
+      "undeclared_steps": [],
+      "filled_roles": [
+        "name",
+        "correlation_key",
+        "steps"
+      ],
+      "missing_roles": [
+        "outcome",
+        "failure_reason",
+        "magnitude",
+        "actor_segment"
+      ],
+      "needs_clarification": [
+        "[4 outcome] not defined \u2014 ask the customer",
+        "[5 failure reason] not defined \u2014 ask the customer",
+        "[6 magnitude] not defined \u2014 ask the customer",
+        "[7 actor segment] not defined \u2014 ask the customer"
+      ],
+      "roles": {
+        "name": "Refund Request",
+        "correlation_key": {
+          "attribute": "refund.id",
+          "persists_across": [
+            "service",
+            "async_job"
+          ]
+        },
+        "steps": [
+          {
+            "id": "refund_requested",
+            "surface": "browser"
+          },
+          {
+            "id": "refund_approved",
+            "surface": "node"
+          },
+          {
+            "id": "refund_settled",
+            "surface": "worker"
+          }
+        ],
+        "outcome": null,
+        "failure_reason": null,
+        "magnitude": null,
+        "actor_segment": null
+      }
+    },
+    {
+      "id": "subscription_upgrade",
+      "name": "Subscription Upgrade",
+      "status": "corroborated",
+      "excluded": false,
+      "excluded_reason": null,
+      "sources": [
+        "declared",
+        "discovered:telemetry"
+      ],
+      "confidence": "medium",
+      "business_impact": "important",
+      "observed_volume": 1420,
+      "owner": null,
+      "spec_ready": false,
+      "blockers": [
+        "outcome defines non-success values (abandoned, failed) but no failure reason attribute"
+      ],
+      "undeclared_steps": [],
+      "filled_roles": [
+        "name",
+        "correlation_key",
+        "steps",
+        "outcome"
+      ],
+      "missing_roles": [
+        "failure_reason",
+        "magnitude",
+        "actor_segment"
+      ],
+      "needs_clarification": [
+        "Is entitlement granted synchronously, or by an async worker that could fail after payment succeeds?",
+        "[5 failure reason] not defined \u2014 ask the customer",
+        "[6 magnitude] not defined \u2014 ask the customer",
+        "[7 actor segment] not defined \u2014 ask the customer"
+      ],
+      "roles": {
+        "name": "Subscription Upgrade",
+        "correlation_key": {
+          "attribute": "upgrade.id",
+          "persists_across": [
+            "service"
+          ]
+        },
+        "steps": [
+          {
+            "id": "plan_selected",
+            "surface": "browser"
+          },
+          {
+            "id": "payment_authorized",
+            "surface": "node"
+          },
+          {
+            "id": "entitlement_granted",
+            "surface": "node"
+          }
+        ],
+        "outcome": {
+          "attribute": "upgrade.outcome",
+          "values": [
+            "completed",
+            "failed",
+            "abandoned"
+          ],
+          "success_values": [
+            "completed"
+          ]
+        },
+        "failure_reason": null,
+        "magnitude": null,
+        "actor_segment": null
+      }
+    },
+    {
+      "id": "health_probe",
+      "name": "Health Probe",
+      "status": "proposed",
+      "excluded": false,
+      "excluded_reason": null,
+      "sources": [
+        "discovered:telemetry"
+      ],
+      "confidence": "high",
+      "business_impact": null,
+      "observed_volume": 9200000,
+      "owner": null,
+      "spec_ready": false,
+      "blockers": [
+        "role 2 correlation key not defined",
+        "role 4 outcome not defined"
+      ],
+      "undeclared_steps": [],
+      "filled_roles": [
+        "name",
+        "steps"
+      ],
+      "missing_roles": [
+        "correlation_key",
+        "outcome",
+        "failure_reason",
+        "magnitude",
+        "actor_segment"
+      ],
+      "needs_clarification": [
+        "[4 outcome] not defined \u2014 ask the customer",
+        "[5 failure reason] not defined \u2014 ask the customer",
+        "[6 magnitude] not defined \u2014 ask the customer",
+        "[7 actor segment] not defined \u2014 ask the customer",
+        "[business impact] unassigned \u2014 must be set by a human, never derived from volume"
+      ],
+      "roles": {
+        "name": "Health Probe",
+        "correlation_key": null,
+        "steps": [
+          {
+            "id": "probe_received",
+            "surface": "node",
+            "evidence": "span: http.server GET /healthz"
+          },
+          {
+            "id": "deps_checked",
+            "surface": "node",
+            "evidence": "span: db SELECT 1"
+          }
+        ],
+        "outcome": null,
+        "failure_reason": null,
+        "magnitude": null,
+        "actor_segment": null
+      }
+    },
+    {
+      "id": "password_reset",
+      "name": "Password Reset",
+      "status": "proposed",
+      "excluded": false,
+      "excluded_reason": null,
+      "sources": [
+        "discovered:code"
+      ],
+      "confidence": "medium",
+      "business_impact": null,
+      "observed_volume": null,
+      "owner": null,
+      "spec_ready": false,
+      "blockers": [
+        "role 2 correlation key not defined",
+        "role 4 outcome not defined"
+      ],
+      "undeclared_steps": [],
+      "filled_roles": [
+        "name",
+        "steps"
+      ],
+      "missing_roles": [
+        "correlation_key",
+        "outcome",
+        "failure_reason",
+        "magnitude",
+        "actor_segment"
+      ],
+      "needs_clarification": [
+        "[4 outcome] not defined \u2014 ask the customer",
+        "[5 failure reason] not defined \u2014 ask the customer",
+        "[6 magnitude] not defined \u2014 ask the customer",
+        "[7 actor segment] not defined \u2014 ask the customer",
+        "[business impact] unassigned \u2014 must be set by a human, never derived from volume"
+      ],
+      "roles": {
+        "name": "Password Reset",
+        "correlation_key": null,
+        "steps": [
+          {
+            "id": "reset_requested",
+            "surface": "browser",
+            "evidence": "src/auth/ResetRequest.tsx"
+          },
+          {
+            "id": "email_sent",
+            "surface": "worker",
+            "evidence": "workers/mail.ts"
+          },
+          {
+            "id": "password_changed",
+            "surface": "node",
+            "evidence": "app/api/auth/reset/route.ts"
+          }
+        ],
+        "outcome": null,
+        "failure_reason": null,
+        "magnitude": null,
+        "actor_segment": null
+      }
+    },
+    {
+      "id": "plan_downgrade",
+      "name": "Plan Downgrade",
+      "status": "proposed",
+      "excluded": false,
+      "excluded_reason": null,
+      "sources": [
+        "discovered:code"
+      ],
+      "confidence": "medium",
+      "business_impact": null,
+      "observed_volume": null,
+      "owner": null,
+      "spec_ready": false,
+      "blockers": [
+        "role 4 outcome not defined"
+      ],
+      "undeclared_steps": [],
+      "filled_roles": [
+        "name",
+        "correlation_key",
+        "steps"
+      ],
+      "missing_roles": [
+        "outcome",
+        "failure_reason",
+        "magnitude",
+        "actor_segment"
+      ],
+      "needs_clarification": [
+        "Revenue-affecting but nobody named it. Does the business track downgrade completion rate?",
+        "[4 outcome] not defined \u2014 ask the customer",
+        "[5 failure reason] not defined \u2014 ask the customer",
+        "[6 magnitude] not defined \u2014 ask the customer",
+        "[7 actor segment] not defined \u2014 ask the customer",
+        "[business impact] unassigned \u2014 must be set by a human, never derived from volume"
+      ],
+      "roles": {
+        "name": "Plan Downgrade",
+        "correlation_key": {
+          "attribute": "subscription.id"
+        },
+        "steps": [
+          {
+            "id": "downgrade_requested",
+            "surface": "browser",
+            "evidence": "src/billing/DowngradeModal.tsx"
+          },
+          {
+            "id": "proration_calculated",
+            "surface": "node",
+            "evidence": "app/api/billing/downgrade/route.ts"
+          },
+          {
+            "id": "entitlement_revoked",
+            "surface": "worker",
+            "evidence": "workers/entitlements.ts"
+          }
+        ],
+        "outcome": null,
+        "failure_reason": null,
+        "magnitude": null,
+        "actor_segment": null
+      }
+    },
+    {
+      "id": "static_asset_load",
+      "name": "Static Asset Load",
+      "status": "proposed",
+      "excluded": true,
+      "excluded_reason": "resource.* spans from the CDN. No business journey, no owner, no action available.",
+      "sources": [
+        "discovered:telemetry"
+      ],
+      "confidence": "high",
+      "business_impact": null,
+      "observed_volume": 1872000,
+      "owner": null,
+      "spec_ready": false,
+      "blockers": [
+        "role 2 correlation key not defined",
+        "role 4 outcome not defined"
+      ],
+      "undeclared_steps": [],
+      "filled_roles": [
+        "name",
+        "steps"
+      ],
+      "missing_roles": [
+        "correlation_key",
+        "outcome",
+        "failure_reason",
+        "magnitude",
+        "actor_segment"
+      ],
+      "needs_clarification": [
+        "[4 outcome] not defined \u2014 ask the customer",
+        "[5 failure reason] not defined \u2014 ask the customer",
+        "[6 magnitude] not defined \u2014 ask the customer",
+        "[7 actor segment] not defined \u2014 ask the customer",
+        "[business impact] unassigned \u2014 must be set by a human, never derived from volume"
+      ],
+      "roles": {
+        "name": "Static Asset Load",
+        "correlation_key": null,
+        "steps": [
+          {
+            "id": "asset_requested",
+            "surface": "browser",
+            "evidence": "span: resource.img"
+          },
+          {
+            "id": "asset_delivered",
+            "surface": "browser",
+            "evidence": "span: resource.css"
+          }
+        ],
+        "outcome": null,
+        "failure_reason": null,
+        "magnitude": null,
+        "actor_segment": null
+      }
+    }
+  ]
+}
