@@ -20,6 +20,10 @@ copy of the logic to drift.
     ce doctor                      # what's installed, what's missing
     ce init                        # scaffold ce-work/ (hand-authored journeys)
     ce propose --repo . --out ce-work/journeys.yaml
+    ce explore --repo . --mode task --out ce-work      # task for YOUR agent, any language
+    ce explore --repo . --ingest ce-work/discovery.json --out ce-work
+    ce explore --repo . --mode openrouter --out ce-work   # LLM explores (OPENROUTER_API_KEY)
+    ce signals --repo . --brief ce-work/signals.md     # the language-agnostic evidence brief
     ce intake  --discovered ce-work/journeys.yaml --out-json ce-work/resolved.json
     ce local   --resolved ce-work/resolved.json --drive 'npm run e2e'
     ce snapshot --org acme --token $SENTRY_AUTH_TOKEN --out ce-work/observed.json
@@ -63,6 +67,8 @@ STAGES = {
     "snapshot": KIT / "gap" / "sentry_source.py",
     "scan": KIT / "gap" / "code_scan.py",
     "propose": KIT / "gap" / "propose.py",
+    "explore": KIT / "gap" / "explore.py",
+    "signals": KIT / "gap" / "signals.py",
     "review": KIT / "intake" / "review.py",
     "spec": KIT / "spec" / "generate.py",
     "publish": KIT / "spec" / "publish.py",
@@ -686,6 +692,17 @@ def cmd_discover(argv: list[str]) -> int:
     ap.add_argument("--out", default=WORK_DIRNAME,
                     help="Work directory for artifacts. Gitignored.")
     ap.add_argument("--max-journeys", type=int, default=6)
+    ap.add_argument("--explorer", choices=["heuristic", "task", "openrouter", "ingest"],
+                    default="heuristic",
+                    help="How journeys are discovered. heuristic: the original "
+                         "JS/TS+Python rules. task: emit a task for YOUR agent/model "
+                         "(no network). openrouter: run the exploration with an LLM "
+                         "(needs OPENROUTER_API_KEY). ingest: validate the discovery.json "
+                         "your agent wrote (--discovery). All but heuristic work on any language.")
+    ap.add_argument("--discovery", type=Path,
+                    help="discovery.json written by your agent, with --explorer ingest.")
+    ap.add_argument("--model", help="OpenRouter model id, with --explorer openrouter "
+                                    "(or set CE_EXPLORER_MODEL).")
     ap.add_argument("--sentry", action="store_true",
                     help="Fetch live Sentry data (token + optional --from-mcp).")
     ap.add_argument("--no-sentry", action="store_true",
@@ -704,7 +721,8 @@ def cmd_discover(argv: list[str]) -> int:
 
     sys.path.insert(0, str(KIT / "gap"))
     from propose import has_supported_source  # noqa: WPS433
-    if not has_supported_source(repo):
+    # The language gate belongs to the heuristic only. An LLM explorer reads any language.
+    if args.explorer == "heuristic" and not has_supported_source(repo):
         print("error: no JavaScript/TypeScript or Python source in this tree. "
               "`ce propose` only reads those languages. Hand-author journeys "
               "with `ce init` instead of generating an empty or junk proposal.",
@@ -725,10 +743,26 @@ def cmd_discover(argv: list[str]) -> int:
     resolved = work / "resolved.json"
     intake_md = work / "intake.md"
 
-    rc = delegate(STAGES["propose"], [
-        "--repo", str(repo), "--out", str(journeys),
-        "--report", str(proposal), "--max-journeys", str(args.max_journeys),
-    ])
+    if args.explorer == "heuristic":
+        rc = delegate(STAGES["propose"], [
+            "--repo", str(repo), "--out", str(journeys),
+            "--report", str(proposal), "--max-journeys", str(args.max_journeys),
+        ])
+    else:
+        ex = ["--repo", str(repo), "--out", str(work)]
+        if args.explorer == "task":
+            return delegate(STAGES["explore"], ex + ["--mode", "task"])
+        if args.explorer == "ingest":
+            if not args.discovery:
+                print("error: --explorer ingest needs --discovery <discovery.json>.",
+                      file=sys.stderr)
+                return 1
+            ex += ["--ingest", str(resolve_path(args.discovery))]
+        else:
+            ex += ["--mode", "openrouter", "--max-journeys", str(max(args.max_journeys, 12))]
+            if args.model:
+                ex += ["--model", args.model]
+        rc = delegate(STAGES["explore"], ex)
     if rc not in (0, 2):
         return rc
     if rc == 2:

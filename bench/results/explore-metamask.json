@@ -1,0 +1,77 @@
+{
+  "truth_total": 13,
+  "proposed_total": 12,
+  "at": [
+    {
+      "k": 5,
+      "proposed": 5,
+      "recall": 0.462,
+      "precision": 1.0,
+      "recall_by_tier": {
+        "code": 0.0,
+        "e2e": 0.545
+      },
+      "truth_covered": [
+        "confirmations",
+        "dapp-connect",
+        "onboarding",
+        "swap-bridge",
+        "tokens-assets",
+        "unlock-reset"
+      ]
+    },
+    {
+      "k": 10,
+      "proposed": 10,
+      "recall": 0.769,
+      "precision": 1.0,
+      "recall_by_tier": {
+        "code": 0.5,
+        "e2e": 0.818
+      },
+      "truth_covered": [
+        "account-management",
+        "confirmations",
+        "dapp-connect",
+        "network",
+        "onboarding",
+        "send",
+        "shield",
+        "swap-bridge",
+        "tokens-assets",
+        "unlock-reset"
+      ]
+    },
+    {
+      "k": 12,
+      "proposed": 12,
+      "recall": 0.923,
+      "precision": 1.0,
+      "recall_by_tier": {
+        "code": 0.5,
+        "e2e": 1.0
+      },
+      "truth_covered": [
+        "account-management",
+        "confirmations",
+        "dapp-connect",
+        "hardware-wallets",
+        "network",
+        "onboarding",
+        "perps",
+        "send",
+        "shield",
+        "swap-bridge",
+        "tokens-assets",
+        "unlock-reset"
+      ]
+    }
+  ],
+  "unmatched_proposals": [],
+  "missed_truth": [
+    "ramps-buy"
+  ],
+  "evidence_ok": 1.0,
+  "evidence_cited": 29,
+  "evidence_missing_sample": []
+}

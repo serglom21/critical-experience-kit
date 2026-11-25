@@ -1,0 +1,399 @@
+version: 1
+journeys:
+- id: sign_up_and_sign_in
+  name: Sign up and sign in
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Nobody reaches the product without it; MFA and redirect failures lock
+    users out. Corroborated by: analytics. Grounded steps: 100%.'
+  steps:
+  - id: sign_up_submit
+    evidence: "User submits email and password to create an account \u2014 apps/studio/components/interfaces/SignIn/SignUpForm.tsx:80\
+      \ onSubmit; apps/studio/components/interfaces/SignIn/SignUpForm.tsx:66 useSignUpMutation"
+    surface: browser
+  - id: password_sign_in
+    evidence: "Credentials are verified against auth \u2014 apps/studio/components/interfaces/SignIn/SignInForm.tsx:80\
+      \ signInWithPassword"
+    surface: browser
+  - id: mfa_challenge
+    evidence: "Accounts with MFA are redirected to the second-factor form \u2014 apps/studio/components/interfaces/SignIn/SignInForm.tsx:93\
+      \ buildPathWithParams; apps/studio/components/interfaces/SignIn/SignInMfaForm.tsx"
+    surface: browser
+  - id: redirect_into_app
+    evidence: "Session established, user routed to their destination \u2014 apps/studio/components/interfaces/SignIn/SignInForm.tsx:109\
+      \ router"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: SSO and OAuth variants (SignInSSOForm, SignInWithExternalProvider) were
+    not traced'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  correlation_key:
+    attribute: auth.attempt_id
+  outcome:
+    attribute: auth.outcome
+    values:
+    - signed_in
+    - mfa_required
+    - failed
+  actor_segment:
+  - attribute: auth.method
+- id: create_project
+  name: Create project
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Provisions the customer''s database; the core activation event. Corroborated
+    by: analytics. Grounded steps: 100%.'
+  steps:
+  - id: confirm_compute_costs
+    evidence: "Compute cost confirmation before submit \u2014 apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx:434\
+      \ onSubmitWithComputeCostsConfirmation"
+    surface: browser
+  - id: build_payload
+    evidence: "Region, instance size, Postgres options assembled \u2014 apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx:456\
+      \ onSubmit"
+    surface: browser
+  - id: provision_project
+    evidence: "Project creation request sent \u2014 apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx:639\
+      \ createProject"
+    surface: browser
+  - id: track_success
+    evidence: "Success handler records the submission \u2014 apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx:383\
+      \ useProjectCreateMutation"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Project readiness polling after create was not traced'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  correlation_key:
+    attribute: project.ref
+  outcome:
+    attribute: project_creation.outcome
+    values:
+    - created
+    - failed
+    - blocked_by_limit
+  actor_segment:
+  - attribute: plan_tier
+  - attribute: cloud_provider
+- id: change_subscription_plan
+  name: Change subscription plan
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Upgrades and downgrades move revenue; errors mis-bill customers. Corroborated
+    by: analytics. Grounded steps: 100%.'
+  steps:
+  - id: confirm_plan_update
+    evidence: "Dialog confirms and applies the subscription update \u2014 apps/studio/components/interfaces/Organization/BillingSettings/Subscription/SubscriptionPlanUpdateDialog.tsx:227\
+      \ updateOrgSubscription; apps/studio/components/interfaces/Organization/BillingSettings/Subscription/SubscriptionPlanUpdateDialog.tsx:152\
+      \ useOrgSubscriptionUpdateMutation"
+    surface: browser
+  - id: exit_survey
+    evidence: "Downgrades go through an exit survey \u2014 apps/studio/components/interfaces/Organization/BillingSettings/Subscription/ExitSurveyModal.tsx:44\
+      \ useOrgSubscriptionUpdateMutation"
+    surface: browser
+  - id: spend_cap
+    evidence: "Spend cap toggled via the same subscription update \u2014 apps/studio/components/interfaces/Organization/BillingSettings/CostControl/SpendCapSidePanel.tsx:98\
+      \ useOrgSubscriptionUpdateMutation"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Invoice and payment-failure handling were not read'
+  - 1 proposed step(s) were dropped for unverifiable evidence.
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  correlation_key:
+    attribute: organization.slug
+  outcome:
+    attribute: plan_change.outcome
+    values:
+    - applied
+    - payment_failed
+    - cancelled
+  actor_segment:
+  - attribute: plan_tier
+- id: manage_auth_users
+  name: Manage project auth users
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Customers'' end users are created, invited and deleted here. Corroborated
+    by: e2e, analytics. Grounded steps: 100%.'
+  steps:
+  - id: create_user
+    evidence: "Admin creates a user \u2014 apps/studio/components/interfaces/Auth/Users/CreateUserModal.tsx:44\
+      \ createUser"
+    surface: browser
+  - id: invite_user
+    evidence: "Admin invites a user by email \u2014 apps/studio/components/interfaces/Auth/Users/InviteUserModal.tsx:45\
+      \ inviteUser"
+    surface: browser
+  - id: delete_user
+    evidence: "Admin deletes a user \u2014 apps/studio/components/interfaces/Auth/Users/DeleteUserModal.tsx:23\
+      \ deleteUser"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  actor_segment:
+  - attribute: project.ref
+- id: edit_table_data
+  name: Create and edit tables and rows
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Core database editing; failed saves lose customer schema or data. Corroborated
+    by: e2e, analytics. Grounded steps: 100%.'
+  steps:
+  - id: save_table
+    evidence: "Side panel saves a table definition \u2014 apps/studio/components/interfaces/TableGridEditor/SidePanelEditor/SidePanelEditor.tsx:586\
+      \ saveTable"
+    surface: browser
+  - id: create_table
+    evidence: "Table created \u2014 apps/studio/components/interfaces/TableGridEditor/SidePanelEditor/SidePanelEditor.tsx:666\
+      \ createTable"
+    surface: browser
+  - id: create_column
+    evidence: "Columns created or edited \u2014 apps/studio/components/interfaces/TableGridEditor/SidePanelEditor/SidePanelEditor.tsx:410\
+      \ createColumn"
+    surface: browser
+  - id: delete_rows
+    evidence: "Rows deleted after confirmation \u2014 apps/studio/components/interfaces/TableGridEditor/DeleteConfirmationDialogs.tsx:117\
+      \ deleteRows"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Row insert/edit path in the grid was not traced'
+  actor_segment:
+  - attribute: project.ref
+- id: run_sql_query
+  name: Run SQL in the SQL editor
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Direct production database access; slow or failed runs are visible to
+    customers. Corroborated by: e2e, analytics. Grounded steps: 100%.'
+  steps:
+  - id: run_query
+    evidence: "User triggers a run \u2014 apps/studio/components/interfaces/SQLEditor/SQLEditorLayout.tsx:74\
+      \ runQuery"
+    surface: browser
+  - id: execute
+    evidence: "Guarded execution of the SQL \u2014 apps/studio/components/interfaces/SQLEditor/SQLEditorLayout.tsx:83\
+      \ executeQuery; apps/studio/components/interfaces/SQLEditor/useSqlEditorExecution.ts:77 useExecuteSqlMutation"
+    surface: browser
+  - id: record_result
+    evidence: "Result stored in the session \u2014 apps/studio/components/interfaces/SQLEditor/useSqlEditorExecution.ts:79\
+      \ addResult"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  actor_segment:
+  - attribute: project.ref
+- id: storage_buckets_and_files
+  name: Create buckets and upload files
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Customer file storage; upload failures lose end-user data. Corroborated
+    by: e2e, analytics. Grounded steps: 100%.'
+  steps:
+  - id: create_bucket
+    evidence: "Bucket created \u2014 apps/studio/components/interfaces/Storage/FilesBuckets/CreateBucketModal.tsx:120\
+      \ createBucket; apps/studio/components/interfaces/Storage/FilesBuckets/CreateBucketModal.tsx:78\
+      \ useBucketCreateMutation"
+    surface: browser
+  - id: upload_files
+    evidence: "Files uploaded to a bucket \u2014 apps/studio/components/interfaces/Storage/BucketFilePickerDialog/BucketFilePickerHeader.tsx:165\
+      \ uploadFilesToBucket"
+    surface: browser
+  - id: delete_bucket_policies
+    evidence: "Deleting a bucket removes its policies \u2014 apps/studio/components/interfaces/Storage/FilesBuckets/DeleteBucketModal.tsx:31\
+      \ deletePolicy"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Main storage explorer upload path was not traced'
+  actor_segment:
+  - attribute: project.ref
+- id: deploy_edge_function
+  name: Deploy and manage edge functions
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Customer backend code; a failed deploy leaves stale or broken functions.
+    Corroborated by: e2e, analytics. Grounded steps: 75%.'
+  steps:
+  - id: start_deploy
+    evidence: "User chooses to deploy from the dashboard \u2014 apps/studio/components/interfaces/EdgeFunctions/DeployEdgeFunctionButton.tsx"
+    surface: browser
+  - id: deploy_request
+    evidence: "Deploy request sent to the platform API \u2014 apps/studio/data/edge-functions/edge-functions-deploy-mutation.ts:40\
+      \ deploy; apps/studio/data/edge-functions/edge-functions-deploy-mutation.ts:24 deployEdgeFunction"
+    surface: browser
+  - id: update_function
+    evidence: "Function settings updated \u2014 apps/studio/components/interfaces/Functions/EdgeFunctionDetails/EdgeFunctionDetails.tsx:113\
+      \ updateEdgeFunction"
+    surface: browser
+  - id: delete_function
+    evidence: "Function deleted \u2014 apps/studio/components/interfaces/Functions/EdgeFunctionDetails/EdgeFunctionDetails.tsx:114\
+      \ deleteEdgeFunction"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  actor_segment:
+  - attribute: project.ref
+- id: database_branching
+  name: Create and merge database branches
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Preview environments; failed merges affect production schema. Corroborated
+    by: e2e, analytics. Grounded steps: 67%.'
+  steps:
+  - id: create_branch
+    evidence: "Branch created \u2014 apps/studio/components/interfaces/BranchManagement/CreateBranchModal.tsx:189\
+      \ createBranch"
+    surface: browser
+  - id: update_branch
+    evidence: "Branch updated \u2014 apps/studio/components/interfaces/BranchManagement/Overview.tsx:306\
+      \ updateBranch"
+    surface: browser
+  - id: merge_request
+    evidence: "Merge request opened from the header \u2014 apps/studio/components/layouts/Navigation/LayoutHeader/MergeRequestButton.tsx"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Merge execution path was not traced'
+  actor_segment:
+  - attribute: project.ref
+- id: rls_policies
+  name: Enable RLS and manage access policies
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Security boundary of customer data. Corroborated by: e2e, analytics.
+    Grounded steps: 100%.'
+  steps:
+  - id: enable_rls
+    evidence: "Table RLS toggled from the grid header \u2014 apps/studio/components/interfaces/TableGridEditor/GridHeaderActions.tsx:107\
+      \ updateTable"
+    surface: browser
+  - id: create_policy
+    evidence: "Policy created (storage policies shown) \u2014 apps/studio/components/interfaces/Storage/StoragePolicies/StoragePolicies.tsx:76\
+      \ createDatabasePolicy"
+    surface: browser
+  - id: delete_policy
+    evidence: "Policy deleted \u2014 apps/studio/components/interfaces/Database/Policies/Policies.tsx:68\
+      \ useDatabasePolicyDeleteMutation"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Main policy create/edit flow in Database/Policies was not read'
+  actor_segment:
+  - attribute: project.ref
+- id: schedule_cron_job
+  name: Schedule and delete cron jobs
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Customer scheduled work. Corroborated by: e2e. Grounded steps: 100%.'
+  steps:
+  - id: upsert_job
+    evidence: "Cron job created or updated \u2014 apps/studio/components/interfaces/Integrations/CronJobs/CreateCronJobSheet/CreateCronJobSheet.tsx:117\
+      \ upsertCronJob"
+    surface: browser
+  - id: delete_job
+    evidence: "Cron job deleted \u2014 apps/studio/components/interfaces/Integrations/CronJobs/DeleteCronJob.tsx:32\
+      \ useDatabaseCronJobDeleteMutation"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  actor_segment:
+  - attribute: project.ref
+- id: create_access_token
+  name: Create and revoke access tokens
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from supabase. Credentials for the management API. Corroborated by: analytics. Grounded
+    steps: 100%.'
+  steps:
+  - id: create_token
+    evidence: "Token created \u2014 apps/studio/components/interfaces/Account/AccessTokens/Classic/NewTokenDialog.tsx:72\
+      \ createAccessToken"
+    surface: browser
+  - id: delete_token
+    evidence: "Token deleted \u2014 apps/studio/components/interfaces/Account/AccessTokens/AccessTokenList.tsx:55\
+      \ useAccessTokenDeleteMutation"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+- id: create_organization
+  name: Create organization (with payment)
+  source: discovered:code
+  confidence: medium
+  notes: 'Explored from supabase. Creates the billing entity; a failure here blocks a paying customer
+    from starting. Corroborated by: nothing independent (code only). Grounded steps: 100%.'
+  steps:
+  - id: submit_form
+    evidence: "Form submitted; free plan skips payment \u2014 apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx:457\
+      \ onSubmit"
+    surface: browser
+  - id: create_payment_method
+    evidence: "Paid plans tokenize a payment method through Stripe before creating \u2014 apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx:466\
+      \ createPaymentMethod; apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx:98 loadStripe"
+    surface: browser
+  - id: create_organization
+    evidence: "Organization created with tier, payment method and billing details \u2014 apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx:445\
+      \ createOrganization"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: 3DS / next-action handling for PaymentIntent was not traced'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  correlation_key:
+    attribute: organization.slug
+  outcome:
+    attribute: org_creation.outcome
+    values:
+    - created
+    - payment_failed
+    - failed
+  actor_segment:
+  - attribute: plan_tier
+- id: accept_organization_invite
+  name: Accept organization invitation
+  source: discovered:code
+  confidence: medium
+  notes: 'Explored from supabase. How teammates join paying orgs; MFA-required orgs can strand invitees.
+    Corroborated by: nothing independent (code only). Grounded steps: 100%.'
+  steps:
+  - id: check_mfa_required
+    evidence: "Invitation page checks whether MFA is required \u2014 apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx:71\
+      \ mfaRequiredError"
+    surface: browser
+  - id: join_organization
+    evidence: "Invitee accepts with slug and token \u2014 apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx:83\
+      \ handleJoinOrganization; apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx:77\
+      \ useOrganizationAcceptInvitationMutation"
+    surface: browser
+  - id: redirect_to_organizations
+    evidence: "On success user lands on the organizations list \u2014 apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx:79\
+      \ router"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Where invitations are sent was not traced'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  correlation_key:
+    attribute: invitation.token_hash
+  outcome:
+    attribute: invite.outcome
+    values:
+    - joined
+    - mfa_required
+    - invalid_or_expired

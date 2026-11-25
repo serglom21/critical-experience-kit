@@ -1,0 +1,711 @@
+{
+ "journeys": [
+  {
+   "id": "wallet_onboarding",
+   "name": "Create or import a wallet",
+   "why_it_matters": "Establishes the vault that holds the user's keys; failure here blocks a new user entirely.",
+   "signals": [
+    "e2e:onboarding",
+    "docs:none"
+   ],
+   "steps": [
+    {
+     "id": "set_password",
+     "description": "User sets a password and accepts terms",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/onboarding-flow/create-password/create-password.tsx",
+       "line": 368,
+       "symbol": "handleCreatePassword"
+      },
+      {
+       "file": "ui/pages/onboarding-flow/create-password/create-password.tsx",
+       "line": 256,
+       "symbol": "handleCreateNewWallet"
+      }
+     ]
+    },
+    {
+     "id": "create_vault",
+     "description": "New vault and recovery phrase created (social path syncs to the seedless service)",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/onboarding-flow/onboarding-flow.tsx",
+       "line": 257,
+       "symbol": "handleCreateNewAccount"
+      },
+      {
+       "file": "ui/store/actions.ts",
+       "line": 1196,
+       "symbol": "createNewVaultAndGetSeedPhrase"
+      }
+     ]
+    },
+    {
+     "id": "restore_vault",
+     "description": "Import path restores a vault from a recovery phrase",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/onboarding-flow/onboarding-flow.tsx",
+       "line": 360,
+       "symbol": "createNewVaultAndRestore"
+      },
+      {
+       "file": "ui/store/actions.ts",
+       "line": 1149,
+       "symbol": "createNewVaultAndRestore"
+      }
+     ]
+    },
+    {
+     "id": "complete_onboarding",
+     "description": "Onboarding marked complete",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/onboarding-flow/onboarding-flow.tsx",
+       "line": 328,
+       "symbol": "setCompletedOnboarding"
+      },
+      {
+       "file": "ui/pages/onboarding-flow/onboarding-flow.tsx",
+       "line": 343,
+       "symbol": "completeOnboarding"
+      }
+     ]
+    }
+   ],
+   "correlation_key": {
+    "attribute": "onboarding.flow_id",
+    "evidence": "none exists; firstTimeFlowType (create/import/socialCreate) in onboarding-flow.tsx is the natural discriminator"
+   },
+   "outcome": {
+    "attribute": "onboarding.outcome",
+    "values": [
+     "completed",
+     "abandoned",
+     "failed"
+    ],
+    "evidence": "OB setCompletedOnboarding"
+   },
+   "actor_segment": [
+    {
+     "attribute": "first_time_flow_type"
+    }
+   ],
+   "open_questions": [
+    "Recovery phrase confirmation and metrics-consent steps were not traced",
+    "Seedless/social login path only partly read"
+   ]
+  },
+  {
+   "id": "unlock_wallet",
+   "name": "Unlock the wallet",
+   "why_it_matters": "Every session begins here; failures lock users out of funds.",
+   "signals": [
+    "e2e:unlock-wallet"
+   ],
+   "steps": [
+    {
+     "id": "submit_password",
+     "description": "Password form submitted",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/unlock-page/unlock-page.component.tsx",
+       "line": 300,
+       "symbol": "handleSubmit"
+      }
+     ]
+    },
+    {
+     "id": "verify_password",
+     "description": "Background verifies and decrypts the vault",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/store/actions.ts",
+       "line": 1241,
+       "symbol": "submitPassword"
+      }
+     ]
+    },
+    {
+     "id": "reset_password",
+     "description": "Forgot-password path",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/unlock-page/reset-password-modal.tsx"
+      }
+     ]
+    }
+   ],
+   "outcome": {
+    "attribute": "unlock.outcome",
+    "values": [
+     "unlocked",
+     "wrong_password",
+     "reset"
+    ],
+    "evidence": "unlock-page.component.tsx"
+   },
+   "open_questions": [
+    "Passkey unlock path was not read"
+   ]
+  },
+  {
+   "id": "send_assets",
+   "name": "Send tokens or NFTs",
+   "why_it_matters": "Moves user funds; address poisoning or amount bugs cause irreversible loss.",
+   "signals": [
+    "e2e:send"
+   ],
+   "steps": [
+    {
+     "id": "validate_amount",
+     "description": "Amount validated against balance and gas",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/confirmations/hooks/send/useAmountValidation.ts"
+      }
+     ]
+    },
+    {
+     "id": "check_recipient",
+     "description": "Recipient checked for address poisoning",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/confirmations/hooks/send/useAddressPoisoningDetection.ts"
+      }
+     ]
+    },
+    {
+     "id": "submit_send",
+     "description": "Send submitted, then routed to loader and confirmation",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/confirmations/hooks/send/useSendActions.ts",
+       "line": 61,
+       "symbol": "handleSubmit"
+      },
+      {
+       "file": "ui/pages/confirmations/hooks/send/useSendActions.ts",
+       "line": 103,
+       "symbol": "navigate"
+      }
+     ]
+    },
+    {
+     "id": "land_on_activity",
+     "description": "User lands on activity after submit",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/confirmations/hooks/send/useSendActions.ts",
+       "line": 141,
+       "symbol": "ACTIVITY_ROUTE"
+      }
+     ]
+    }
+   ],
+   "magnitude": [
+    {
+     "attribute": "send.amount_usd",
+     "type": "double"
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "asset_type"
+    },
+    {
+     "attribute": "chain_id"
+    }
+   ],
+   "outcome": {
+    "attribute": "send.outcome",
+    "values": [
+     "submitted",
+     "cancelled",
+     "failed"
+    ],
+    "evidence": "useSendActions.ts handleSubmit branches"
+   },
+   "open_questions": [
+    "Bitcoin and Tron send variants not traced"
+   ]
+  },
+  {
+   "id": "confirm_transaction_or_signature",
+   "name": "Review and confirm a transaction or signature",
+   "why_it_matters": "The consent point for every on-chain action and dapp signature.",
+   "signals": [
+    "e2e:confirmations",
+    "analytics:SignatureApproved"
+   ],
+   "steps": [
+    {
+     "id": "render_confirmation",
+     "description": "Confirmation screen shown with alerts",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/confirmations/confirm/confirm.tsx"
+      }
+     ]
+    },
+    {
+     "id": "confirm",
+     "description": "User confirms; transaction confirm hook runs",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/confirmations/components/confirm/footer/footer.tsx",
+       "line": 323,
+       "symbol": "onTransactionConfirm"
+      },
+      {
+       "file": "ui/pages/confirmations/components/confirm/footer/footer.tsx",
+       "line": 168,
+       "symbol": "onSubmit"
+      }
+     ]
+    },
+    {
+     "id": "cancel",
+     "description": "User rejects or cancels",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/confirmations/hooks/useConfirmActions.ts",
+       "line": 50,
+       "symbol": "onCancel"
+      }
+     ]
+    }
+   ],
+   "outcome": {
+    "attribute": "confirmation.outcome",
+    "values": [
+     "confirmed",
+     "rejected",
+     "failed"
+    ],
+    "evidence": "footer.tsx / useConfirmActions.ts"
+   },
+   "actor_segment": [
+    {
+     "attribute": "confirmation_type"
+    }
+   ],
+   "open_questions": []
+  },
+  {
+   "id": "swap_or_bridge",
+   "name": "Swap or bridge assets",
+   "why_it_matters": "Revenue-generating, multi-step cross-chain flow with quotes and signatures.",
+   "signals": [
+    "e2e:swaps",
+    "e2e:bridge",
+    "analytics:QuotesReceived"
+   ],
+   "steps": [
+    {
+     "id": "request_quotes",
+     "description": "Quote request parameters updated as the user edits",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/bridge/prepare/prepare-bridge-page.tsx",
+       "line": 376,
+       "symbol": "updateQuoteRequestParams"
+      }
+     ]
+    },
+    {
+     "id": "submit_cta",
+     "description": "User submits the active quote",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/bridge/prepare/bridge-cta-button.tsx",
+       "line": 162,
+       "symbol": "submitBridgeTransaction"
+      },
+      {
+       "file": "ui/pages/bridge/prepare/bridge-cta-button.tsx",
+       "line": 59,
+       "symbol": "useSubmitBridgeTransaction"
+      }
+     ]
+    },
+    {
+     "id": "submit_quote",
+     "description": "Quote turned into transaction(s) and submitted",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/hooks/bridge/useSubmitBridgeTransaction.ts",
+       "line": 126,
+       "symbol": "submitQuote"
+      },
+      {
+       "file": "ui/hooks/bridge/useSubmitBridgeTransaction.ts",
+       "line": 228,
+       "symbol": "submitBridgeTransaction"
+      }
+     ]
+    }
+   ],
+   "magnitude": [
+    {
+     "attribute": "swap.amount_usd",
+     "type": "double"
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "source_chain"
+    },
+    {
+     "attribute": "dest_chain"
+    }
+   ],
+   "outcome": {
+    "attribute": "swap.outcome",
+    "values": [
+     "completed",
+     "failed",
+     "cancelled"
+    ],
+    "evidence": "useSubmitBridgeTransaction.ts"
+   },
+   "open_questions": [
+    "Legacy swaps page (ui/pages/swaps) not traced"
+   ]
+  },
+  {
+   "id": "connect_dapp",
+   "name": "Connect a dapp",
+   "why_it_matters": "Gate for every dapp interaction; permission bugs expose accounts.",
+   "signals": [
+    "e2e:connections",
+    "e2e:dapp-interactions"
+   ],
+   "steps": [
+    {
+     "id": "review_request",
+     "description": "User reviews the requested accounts and chains",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/permissions-connect/permissions-connect.tsx",
+       "line": 517,
+       "symbol": "onSubmit"
+      }
+     ]
+    },
+    {
+     "id": "approve_permissions",
+     "description": "Permissions granted",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/permissions-connect/permissions-connect.tsx",
+       "line": 485,
+       "symbol": "approvePermissionsRequestAction"
+      }
+     ]
+    },
+    {
+     "id": "reject_permissions",
+     "description": "Request rejected",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/permissions-connect/permissions-connect.tsx",
+       "line": 474,
+       "symbol": "rejectPermissionsRequestAction"
+      }
+     ]
+    }
+   ],
+   "outcome": {
+    "attribute": "connect.outcome",
+    "values": [
+     "approved",
+     "rejected"
+    ],
+    "evidence": "permissions-connect.tsx"
+   },
+   "open_questions": [
+    "Background permission controller not read"
+   ]
+  },
+  {
+   "id": "add_network",
+   "name": "Add and switch networks",
+   "why_it_matters": "Wrong network config sends funds to the wrong chain.",
+   "signals": [
+    "e2e:network"
+   ],
+   "steps": [
+    {
+     "id": "add_network",
+     "description": "Popular network added",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/components/multichain/network-list-menu/popular-network-list/popular-network-list.tsx",
+       "line": 182,
+       "symbol": "addNetwork"
+      }
+     ]
+    },
+    {
+     "id": "switch_network",
+     "description": "Active network switched",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/components/multichain/network-list-menu/network-list-menu.tsx",
+       "line": 477,
+       "symbol": "setActiveNetwork"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "chain_id"
+    }
+   ],
+   "open_questions": [
+    "Custom RPC add form not traced"
+   ]
+  },
+  {
+   "id": "import_token_or_nft",
+   "name": "Import tokens and NFTs",
+   "why_it_matters": "Asset visibility; spoofed or failed imports mislead users about balances.",
+   "signals": [
+    "e2e:tokens",
+    "analytics:TokenAdded"
+   ],
+   "steps": [
+    {
+     "id": "import_token",
+     "description": "Custom token imported",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/pages/custom-token-import/custom-token-import.tsx",
+       "line": 499,
+       "symbol": "addImportedTokens"
+      }
+     ]
+    },
+    {
+     "id": "import_nft",
+     "description": "NFT imported after verifying ownership",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/components/multichain/import-nfts-modal/import-nfts-form.tsx",
+       "line": 159,
+       "symbol": "addNftVerifyOwnership"
+      }
+     ]
+    }
+   ],
+   "open_questions": []
+  },
+  {
+   "id": "subscribe_shield",
+   "name": "Subscribe to Shield",
+   "why_it_matters": "Paid subscription checkout; failures lose revenue and strand paying users.",
+   "signals": [
+    "e2e:shield"
+   ],
+   "steps": [
+    {
+     "id": "start_checkout",
+     "description": "Subscription started with card through a hosted checkout session",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "app/scripts/services/subscription/shield-subscription-service.ts",
+       "line": 174,
+       "symbol": "startSubscriptionWithCard"
+      }
+     ]
+    },
+    {
+     "id": "controller_call",
+     "description": "Controller creates the checkout session",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "app/scripts/services/subscription/shield-subscription-service.ts",
+       "line": 190,
+       "symbol": "SubscriptionController:startSubscriptionWithCard"
+      }
+     ]
+    }
+   ],
+   "correlation_key": {
+    "attribute": "subscription.checkout_session",
+    "evidence": "checkoutSessionUrl in startSubscriptionWithCard"
+   },
+   "outcome": {
+    "attribute": "shield.outcome",
+    "values": [
+     "subscribed",
+     "cancelled",
+     "failed"
+    ],
+    "evidence": "shield-subscription-service.ts"
+   },
+   "actor_segment": [
+    {
+     "attribute": "payment_method"
+    }
+   ],
+   "open_questions": [
+    "Crypto payment path and polling not read"
+   ]
+  },
+  {
+   "id": "manage_accounts",
+   "name": "Add accounts and export keys",
+   "why_it_matters": "Account creation and private-key export are high-risk identity operations.",
+   "signals": [
+    "e2e:account"
+   ],
+   "steps": [
+    {
+     "id": "import_account",
+     "description": "Account imported by strategy",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/store/actions.ts",
+       "line": 1346,
+       "symbol": "importNewAccount"
+      }
+     ]
+    },
+    {
+     "id": "export_private_key",
+     "description": "Private keys revealed or exported",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/components/multichain-accounts/multichain-private-key-list/multichain-private-key-list.tsx"
+      }
+     ]
+    }
+   ],
+   "open_questions": [
+    "Multichain account group creation not traced"
+   ]
+  },
+  {
+   "id": "hardware_wallet_signing",
+   "name": "Sign with a hardware wallet",
+   "why_it_matters": "Device disconnects and rejections strand in-flight transactions.",
+   "signals": [
+    "e2e:hardware-wallets",
+    "analytics:HardwareWalletSignatureEvent"
+   ],
+   "steps": [
+    {
+     "id": "sign_tracking",
+     "description": "Signing progress tracked for batches",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/hooks/hardware-wallets/hw-sign-tracker/batch-tracking-strategy.ts"
+      }
+     ]
+    },
+    {
+     "id": "swap_actions",
+     "description": "Swap actions on a hardware device",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/hooks/hardware-wallets/useHwSwapActions.ts"
+      }
+     ]
+    },
+    {
+     "id": "device_events",
+     "description": "Device connect/disconnect events handled",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/contexts/hardware-wallets/HardwareWalletEventHandlers.tsx"
+      }
+     ]
+    }
+   ],
+   "open_questions": [
+    "Entry-to-effect path not traced; evidence is file-level only"
+   ]
+  },
+  {
+   "id": "perps_trading",
+   "name": "Trade perpetuals",
+   "why_it_matters": "Leveraged trading; order and close failures cost users money directly.",
+   "signals": [
+    "e2e:perps",
+    "analytics:PerpsUiInteraction"
+   ],
+   "steps": [
+    {
+     "id": "perps_view",
+     "description": "User views positions and orders",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/components/app/perps/perps-view.tsx"
+      }
+     ]
+    },
+    {
+     "id": "close_position",
+     "description": "Close-position modal",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "ui/components/app/perps/close-position/close-position-modal.tsx"
+      }
+     ]
+    },
+    {
+     "id": "controller_infra",
+     "description": "Perps controller infrastructure handles orders and withdrawals",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "app/scripts/controllers/perps/infrastructure.ts",
+       "line": 121,
+       "symbol": "placeOrder"
+      }
+     ]
+    }
+   ],
+   "open_questions": [
+    "Order placement path not traced; evidence is file-level for two steps"
+   ]
+  }
+ ]
+}

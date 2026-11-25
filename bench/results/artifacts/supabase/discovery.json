@@ -1,0 +1,887 @@
+{
+ "journeys": [
+  {
+   "id": "sign_up_and_sign_in",
+   "name": "Sign up and sign in",
+   "why_it_matters": "Nobody reaches the product without it; MFA and redirect failures lock users out.",
+   "signals": [
+    "analytics:sign_in_submitted",
+    "analytics:signin"
+   ],
+   "steps": [
+    {
+     "id": "sign_up_submit",
+     "description": "User submits email and password to create an account",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/SignIn/SignUpForm.tsx",
+       "line": 80,
+       "symbol": "onSubmit"
+      },
+      {
+       "file": "apps/studio/components/interfaces/SignIn/SignUpForm.tsx",
+       "line": 66,
+       "symbol": "useSignUpMutation"
+      }
+     ]
+    },
+    {
+     "id": "password_sign_in",
+     "description": "Credentials are verified against auth",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/SignIn/SignInForm.tsx",
+       "line": 80,
+       "symbol": "signInWithPassword"
+      }
+     ]
+    },
+    {
+     "id": "mfa_challenge",
+     "description": "Accounts with MFA are redirected to the second-factor form",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/SignIn/SignInForm.tsx",
+       "line": 93,
+       "symbol": "buildPathWithParams"
+      },
+      {
+       "file": "apps/studio/components/interfaces/SignIn/SignInMfaForm.tsx"
+      }
+     ]
+    },
+    {
+     "id": "redirect_into_app",
+     "description": "Session established, user routed to their destination",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/SignIn/SignInForm.tsx",
+       "line": 109,
+       "symbol": "router"
+      }
+     ]
+    }
+   ],
+   "correlation_key": {
+    "attribute": "auth.attempt_id",
+    "evidence": "no id exists today; would be created at onSubmit"
+   },
+   "outcome": {
+    "attribute": "auth.outcome",
+    "values": [
+     "signed_in",
+     "mfa_required",
+     "failed"
+    ],
+    "evidence": "SignInForm.tsx onSubmit branches"
+   },
+   "actor_segment": [
+    {
+     "attribute": "auth.method"
+    }
+   ],
+   "open_questions": [
+    "SSO and OAuth variants (SignInSSOForm, SignInWithExternalProvider) were not traced"
+   ]
+  },
+  {
+   "id": "create_organization",
+   "name": "Create organization (with payment)",
+   "why_it_matters": "Creates the billing entity; a failure here blocks a paying customer from starting.",
+   "signals": [
+    "analytics:org_creation"
+   ],
+   "steps": [
+    {
+     "id": "submit_form",
+     "description": "Form submitted; free plan skips payment",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx",
+       "line": 457,
+       "symbol": "onSubmit"
+      }
+     ]
+    },
+    {
+     "id": "create_payment_method",
+     "description": "Paid plans tokenize a payment method through Stripe before creating",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx",
+       "line": 466,
+       "symbol": "createPaymentMethod"
+      },
+      {
+       "file": "apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx",
+       "line": 98,
+       "symbol": "loadStripe"
+      }
+     ]
+    },
+    {
+     "id": "create_organization",
+     "description": "Organization created with tier, payment method and billing details",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Organization/NewOrg/NewOrgForm.tsx",
+       "line": 445,
+       "symbol": "createOrganization"
+      }
+     ]
+    }
+   ],
+   "correlation_key": {
+    "attribute": "organization.slug",
+    "evidence": "returned by useOrganizationCreateMutation"
+   },
+   "outcome": {
+    "attribute": "org_creation.outcome",
+    "values": [
+     "created",
+     "payment_failed",
+     "failed"
+    ],
+    "evidence": "NewOrgForm.tsx"
+   },
+   "magnitude": [],
+   "actor_segment": [
+    {
+     "attribute": "plan_tier"
+    }
+   ],
+   "open_questions": [
+    "3DS / next-action handling for PaymentIntent was not traced"
+   ]
+  },
+  {
+   "id": "create_project",
+   "name": "Create project",
+   "why_it_matters": "Provisions the customer's database; the core activation event.",
+   "signals": [
+    "analytics:project_creation"
+   ],
+   "steps": [
+    {
+     "id": "confirm_compute_costs",
+     "description": "Compute cost confirmation before submit",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx",
+       "line": 434,
+       "symbol": "onSubmitWithComputeCostsConfirmation"
+      }
+     ]
+    },
+    {
+     "id": "build_payload",
+     "description": "Region, instance size, Postgres options assembled",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx",
+       "line": 456,
+       "symbol": "onSubmit"
+      }
+     ]
+    },
+    {
+     "id": "provision_project",
+     "description": "Project creation request sent",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx",
+       "line": 639,
+       "symbol": "createProject"
+      }
+     ]
+    },
+    {
+     "id": "track_success",
+     "description": "Success handler records the submission",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx",
+       "line": 383,
+       "symbol": "useProjectCreateMutation"
+      }
+     ]
+    }
+   ],
+   "correlation_key": {
+    "attribute": "project.ref",
+    "evidence": "returned by project create"
+   },
+   "outcome": {
+    "attribute": "project_creation.outcome",
+    "values": [
+     "created",
+     "failed",
+     "blocked_by_limit"
+    ],
+    "evidence": "ProjectCreationForm.tsx onSuccess/onError; FreeProjectLimitWarning.tsx"
+   },
+   "actor_segment": [
+    {
+     "attribute": "plan_tier"
+    },
+    {
+     "attribute": "cloud_provider"
+    }
+   ],
+   "open_questions": [
+    "Project readiness polling after create was not traced"
+   ]
+  },
+  {
+   "id": "change_subscription_plan",
+   "name": "Change subscription plan",
+   "why_it_matters": "Upgrades and downgrades move revenue; errors mis-bill customers.",
+   "signals": [
+    "code-only"
+   ],
+   "steps": [
+    {
+     "id": "classify_change",
+     "description": "Plan change classified as upgrade, downgrade or none",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Organization/BillingSettings/Subscription/Subscription.utils.ts",
+       "line": 34,
+       "symbol": "PlanChangeType"
+      }
+     ]
+    },
+    {
+     "id": "confirm_plan_update",
+     "description": "Dialog confirms and applies the subscription update",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Organization/BillingSettings/Subscription/SubscriptionPlanUpdateDialog.tsx",
+       "line": 227,
+       "symbol": "updateOrgSubscription"
+      },
+      {
+       "file": "apps/studio/components/interfaces/Organization/BillingSettings/Subscription/SubscriptionPlanUpdateDialog.tsx",
+       "line": 152,
+       "symbol": "useOrgSubscriptionUpdateMutation"
+      }
+     ]
+    },
+    {
+     "id": "exit_survey",
+     "description": "Downgrades go through an exit survey",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Organization/BillingSettings/Subscription/ExitSurveyModal.tsx",
+       "line": 44,
+       "symbol": "useOrgSubscriptionUpdateMutation"
+      }
+     ]
+    },
+    {
+     "id": "spend_cap",
+     "description": "Spend cap toggled via the same subscription update",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Organization/BillingSettings/CostControl/SpendCapSidePanel.tsx",
+       "line": 98,
+       "symbol": "useOrgSubscriptionUpdateMutation"
+      }
+     ]
+    }
+   ],
+   "correlation_key": {
+    "attribute": "organization.slug",
+    "evidence": "subscription is per organization"
+   },
+   "outcome": {
+    "attribute": "plan_change.outcome",
+    "values": [
+     "applied",
+     "payment_failed",
+     "cancelled"
+    ],
+    "evidence": "SubscriptionPlanUpdateDialog.tsx"
+   },
+   "actor_segment": [
+    {
+     "attribute": "plan_tier"
+    }
+   ],
+   "open_questions": [
+    "Invoice and payment-failure handling were not read"
+   ]
+  },
+  {
+   "id": "accept_organization_invite",
+   "name": "Accept organization invitation",
+   "why_it_matters": "How teammates join paying orgs; MFA-required orgs can strand invitees.",
+   "signals": [
+    "code-only"
+   ],
+   "steps": [
+    {
+     "id": "check_mfa_required",
+     "description": "Invitation page checks whether MFA is required",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx",
+       "line": 71,
+       "symbol": "mfaRequiredError"
+      }
+     ]
+    },
+    {
+     "id": "join_organization",
+     "description": "Invitee accepts with slug and token",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx",
+       "line": 83,
+       "symbol": "handleJoinOrganization"
+      },
+      {
+       "file": "apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx",
+       "line": 77,
+       "symbol": "useOrganizationAcceptInvitationMutation"
+      }
+     ]
+    },
+    {
+     "id": "redirect_to_organizations",
+     "description": "On success user lands on the organizations list",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/OrganizationInvite/OrganizationInvite.tsx",
+       "line": 79,
+       "symbol": "router"
+      }
+     ]
+    }
+   ],
+   "correlation_key": {
+    "attribute": "invitation.token_hash",
+    "evidence": "token is in the URL; hash it, never log it"
+   },
+   "outcome": {
+    "attribute": "invite.outcome",
+    "values": [
+     "joined",
+     "mfa_required",
+     "invalid_or_expired"
+    ],
+    "evidence": "OrganizationInviteError.tsx"
+   },
+   "open_questions": [
+    "Where invitations are sent was not traced"
+   ]
+  },
+  {
+   "id": "manage_auth_users",
+   "name": "Manage project auth users",
+   "why_it_matters": "Customers' end users are created, invited and deleted here.",
+   "signals": [
+    "e2e:auth-users",
+    "e2e:auth-user-panel",
+    "analytics:auth_users_search_submitted"
+   ],
+   "steps": [
+    {
+     "id": "create_user",
+     "description": "Admin creates a user",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Auth/Users/CreateUserModal.tsx",
+       "line": 44,
+       "symbol": "createUser"
+      }
+     ]
+    },
+    {
+     "id": "invite_user",
+     "description": "Admin invites a user by email",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Auth/Users/InviteUserModal.tsx",
+       "line": 45,
+       "symbol": "inviteUser"
+      }
+     ]
+    },
+    {
+     "id": "delete_user",
+     "description": "Admin deletes a user",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Auth/Users/DeleteUserModal.tsx",
+       "line": 23,
+       "symbol": "deleteUser"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": []
+  },
+  {
+   "id": "edit_table_data",
+   "name": "Create and edit tables and rows",
+   "why_it_matters": "Core database editing; failed saves lose customer schema or data.",
+   "signals": [
+    "e2e:table-editor",
+    "e2e:column-editor-types"
+   ],
+   "steps": [
+    {
+     "id": "save_table",
+     "description": "Side panel saves a table definition",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/TableGridEditor/SidePanelEditor/SidePanelEditor.tsx",
+       "line": 586,
+       "symbol": "saveTable"
+      }
+     ]
+    },
+    {
+     "id": "create_table",
+     "description": "Table created",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/TableGridEditor/SidePanelEditor/SidePanelEditor.tsx",
+       "line": 666,
+       "symbol": "createTable"
+      }
+     ]
+    },
+    {
+     "id": "create_column",
+     "description": "Columns created or edited",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/TableGridEditor/SidePanelEditor/SidePanelEditor.tsx",
+       "line": 410,
+       "symbol": "createColumn"
+      }
+     ]
+    },
+    {
+     "id": "delete_rows",
+     "description": "Rows deleted after confirmation",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/TableGridEditor/DeleteConfirmationDialogs.tsx",
+       "line": 117,
+       "symbol": "deleteRows"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": [
+    "Row insert/edit path in the grid was not traced"
+   ]
+  },
+  {
+   "id": "run_sql_query",
+   "name": "Run SQL in the SQL editor",
+   "why_it_matters": "Direct production database access; slow or failed runs are visible to customers.",
+   "signals": [
+    "e2e:sql-editor"
+   ],
+   "steps": [
+    {
+     "id": "run_query",
+     "description": "User triggers a run",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/SQLEditor/SQLEditorLayout.tsx",
+       "line": 74,
+       "symbol": "runQuery"
+      }
+     ]
+    },
+    {
+     "id": "execute",
+     "description": "Guarded execution of the SQL",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/SQLEditor/SQLEditorLayout.tsx",
+       "line": 83,
+       "symbol": "executeQuery"
+      },
+      {
+       "file": "apps/studio/components/interfaces/SQLEditor/useSqlEditorExecution.ts",
+       "line": 77,
+       "symbol": "useExecuteSqlMutation"
+      }
+     ]
+    },
+    {
+     "id": "record_result",
+     "description": "Result stored in the session",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/SQLEditor/useSqlEditorExecution.ts",
+       "line": 79,
+       "symbol": "addResult"
+      }
+     ]
+    }
+   ],
+   "magnitude": [],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": []
+  },
+  {
+   "id": "storage_buckets_and_files",
+   "name": "Create buckets and upload files",
+   "why_it_matters": "Customer file storage; upload failures lose end-user data.",
+   "signals": [
+    "e2e:storage",
+    "analytics:storage_bucket_created"
+   ],
+   "steps": [
+    {
+     "id": "create_bucket",
+     "description": "Bucket created",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Storage/FilesBuckets/CreateBucketModal.tsx",
+       "line": 120,
+       "symbol": "createBucket"
+      },
+      {
+       "file": "apps/studio/components/interfaces/Storage/FilesBuckets/CreateBucketModal.tsx",
+       "line": 78,
+       "symbol": "useBucketCreateMutation"
+      }
+     ]
+    },
+    {
+     "id": "upload_files",
+     "description": "Files uploaded to a bucket",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Storage/BucketFilePickerDialog/BucketFilePickerHeader.tsx",
+       "line": 165,
+       "symbol": "uploadFilesToBucket"
+      }
+     ]
+    },
+    {
+     "id": "delete_bucket_policies",
+     "description": "Deleting a bucket removes its policies",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Storage/FilesBuckets/DeleteBucketModal.tsx",
+       "line": 31,
+       "symbol": "deletePolicy"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": [
+    "Main storage explorer upload path was not traced"
+   ]
+  },
+  {
+   "id": "deploy_edge_function",
+   "name": "Deploy and manage edge functions",
+   "why_it_matters": "Customer backend code; a failed deploy leaves stale or broken functions.",
+   "signals": [
+    "e2e:edge-functions",
+    "analytics:edge_function_deploy_button_clicked"
+   ],
+   "steps": [
+    {
+     "id": "start_deploy",
+     "description": "User chooses to deploy from the dashboard",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/EdgeFunctions/DeployEdgeFunctionButton.tsx"
+      }
+     ]
+    },
+    {
+     "id": "deploy_request",
+     "description": "Deploy request sent to the platform API",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/data/edge-functions/edge-functions-deploy-mutation.ts",
+       "line": 40,
+       "symbol": "deploy"
+      },
+      {
+       "file": "apps/studio/data/edge-functions/edge-functions-deploy-mutation.ts",
+       "line": 24,
+       "symbol": "deployEdgeFunction"
+      }
+     ]
+    },
+    {
+     "id": "update_function",
+     "description": "Function settings updated",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Functions/EdgeFunctionDetails/EdgeFunctionDetails.tsx",
+       "line": 113,
+       "symbol": "updateEdgeFunction"
+      }
+     ]
+    },
+    {
+     "id": "delete_function",
+     "description": "Function deleted",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Functions/EdgeFunctionDetails/EdgeFunctionDetails.tsx",
+       "line": 114,
+       "symbol": "deleteEdgeFunction"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": []
+  },
+  {
+   "id": "database_branching",
+   "name": "Create and merge database branches",
+   "why_it_matters": "Preview environments; failed merges affect production schema.",
+   "signals": [
+    "analytics:branch_create_merge_request_button_clicked"
+   ],
+   "steps": [
+    {
+     "id": "create_branch",
+     "description": "Branch created",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/BranchManagement/CreateBranchModal.tsx",
+       "line": 189,
+       "symbol": "createBranch"
+      }
+     ]
+    },
+    {
+     "id": "update_branch",
+     "description": "Branch updated",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/BranchManagement/Overview.tsx",
+       "line": 306,
+       "symbol": "updateBranch"
+      }
+     ]
+    },
+    {
+     "id": "merge_request",
+     "description": "Merge request opened from the header",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/layouts/Navigation/LayoutHeader/MergeRequestButton.tsx"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": [
+    "Merge execution path was not traced"
+   ]
+  },
+  {
+   "id": "rls_policies",
+   "name": "Enable RLS and manage access policies",
+   "why_it_matters": "Security boundary of customer data.",
+   "signals": [
+    "e2e:rls-policies",
+    "analytics:table_rls_enabled"
+   ],
+   "steps": [
+    {
+     "id": "enable_rls",
+     "description": "Table RLS toggled from the grid header",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/TableGridEditor/GridHeaderActions.tsx",
+       "line": 107,
+       "symbol": "updateTable"
+      }
+     ]
+    },
+    {
+     "id": "create_policy",
+     "description": "Policy created (storage policies shown)",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Storage/StoragePolicies/StoragePolicies.tsx",
+       "line": 76,
+       "symbol": "createDatabasePolicy"
+      }
+     ]
+    },
+    {
+     "id": "delete_policy",
+     "description": "Policy deleted",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Database/Policies/Policies.tsx",
+       "line": 68,
+       "symbol": "useDatabasePolicyDeleteMutation"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": [
+    "Main policy create/edit flow in Database/Policies was not read"
+   ]
+  },
+  {
+   "id": "schedule_cron_job",
+   "name": "Schedule and delete cron jobs",
+   "why_it_matters": "Customer scheduled work.",
+   "signals": [
+    "e2e:cron-jobs"
+   ],
+   "steps": [
+    {
+     "id": "upsert_job",
+     "description": "Cron job created or updated",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Integrations/CronJobs/CreateCronJobSheet/CreateCronJobSheet.tsx",
+       "line": 117,
+       "symbol": "upsertCronJob"
+      }
+     ]
+    },
+    {
+     "id": "delete_job",
+     "description": "Cron job deleted",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Integrations/CronJobs/DeleteCronJob.tsx",
+       "line": 32,
+       "symbol": "useDatabaseCronJobDeleteMutation"
+      }
+     ]
+    }
+   ],
+   "actor_segment": [
+    {
+     "attribute": "project.ref"
+    }
+   ],
+   "open_questions": []
+  },
+  {
+   "id": "create_access_token",
+   "name": "Create and revoke access tokens",
+   "why_it_matters": "Credentials for the management API.",
+   "signals": [
+    "analytics:access_token_created"
+   ],
+   "steps": [
+    {
+     "id": "create_token",
+     "description": "Token created",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Account/AccessTokens/Classic/NewTokenDialog.tsx",
+       "line": 72,
+       "symbol": "createAccessToken"
+      }
+     ]
+    },
+    {
+     "id": "delete_token",
+     "description": "Token deleted",
+     "surface": "browser",
+     "evidence": [
+      {
+       "file": "apps/studio/components/interfaces/Account/AccessTokens/AccessTokenList.tsx",
+       "line": 55,
+       "symbol": "useAccessTokenDeleteMutation"
+      }
+     ]
+    }
+   ],
+   "open_questions": []
+  }
+ ]
+}

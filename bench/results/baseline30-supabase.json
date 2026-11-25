@@ -1,0 +1,85 @@
+{
+  "truth_total": 14,
+  "proposed_total": 28,
+  "at": [
+    {
+      "k": 5,
+      "proposed": 5,
+      "recall": 0.0,
+      "precision": 0.0,
+      "recall_by_tier": {
+        "code": 0.0,
+        "e2e": 0.0
+      },
+      "truth_covered": []
+    },
+    {
+      "k": 10,
+      "proposed": 10,
+      "recall": 0.143,
+      "precision": 0.2,
+      "recall_by_tier": {
+        "code": 0.0,
+        "e2e": 0.2
+      },
+      "truth_covered": [
+        "auth-users",
+        "storage"
+      ]
+    },
+    {
+      "k": 28,
+      "proposed": 28,
+      "recall": 0.357,
+      "precision": 0.25,
+      "recall_by_tier": {
+        "code": 0.0,
+        "e2e": 0.5
+      },
+      "truth_covered": [
+        "auth-users",
+        "database-schema",
+        "edge-functions",
+        "logs",
+        "storage"
+      ]
+    }
+  ],
+  "unmatched_proposals": [
+    "example",
+    "studio",
+    "ui",
+    "www",
+    "doc",
+    "data",
+    "tool",
+    "ui_library",
+    "misc",
+    "registry",
+    "design_system",
+    "launch_week",
+    "package",
+    "slug",
+    "command_menu",
+    "release",
+    "solution",
+    "support",
+    "icon",
+    "learn",
+    "kb"
+  ],
+  "missed_truth": [
+    "billing",
+    "cron-jobs",
+    "org-invite",
+    "project-creation",
+    "realtime",
+    "rls-policies",
+    "sign-in",
+    "sql-editor",
+    "table-editor"
+  ],
+  "evidence_ok": 1.0,
+  "evidence_cited": 154,
+  "evidence_missing_sample": []
+}

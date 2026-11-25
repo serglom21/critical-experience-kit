@@ -1,0 +1,87 @@
+{
+  "truth_total": 13,
+  "proposed_total": 30,
+  "at": [
+    {
+      "k": 5,
+      "proposed": 5,
+      "recall": 0.154,
+      "precision": 0.6,
+      "recall_by_tier": {
+        "code": 0.0,
+        "e2e": 0.182
+      },
+      "truth_covered": [
+        "confirmations",
+        "perps"
+      ]
+    },
+    {
+      "k": 10,
+      "proposed": 10,
+      "recall": 0.462,
+      "precision": 0.7,
+      "recall_by_tier": {
+        "code": 0.5,
+        "e2e": 0.455
+      },
+      "truth_covered": [
+        "confirmations",
+        "dapp-connect",
+        "perps",
+        "ramps-buy",
+        "swap-bridge",
+        "tokens-assets"
+      ]
+    },
+    {
+      "k": 30,
+      "proposed": 30,
+      "recall": 0.692,
+      "precision": 0.433,
+      "recall_by_tier": {
+        "code": 0.5,
+        "e2e": 0.727
+      },
+      "truth_covered": [
+        "account-management",
+        "confirmations",
+        "dapp-connect",
+        "hardware-wallets",
+        "perps",
+        "ramps-buy",
+        "send",
+        "swap-bridge",
+        "tokens-assets"
+      ]
+    }
+  ],
+  "unmatched_proposals": [
+    "ui",
+    "money",
+    "messenger",
+    "selector",
+    "messenger_client_init",
+    "reward",
+    "deep_link",
+    "snap_ui_renderer",
+    "flow",
+    "pay",
+    "setting",
+    "musd",
+    "development",
+    "multichain",
+    "review",
+    "row",
+    "benchmark"
+  ],
+  "missed_truth": [
+    "network",
+    "onboarding",
+    "shield",
+    "unlock-reset"
+  ],
+  "evidence_ok": 1.0,
+  "evidence_cited": 155,
+  "evidence_missing_sample": []
+}

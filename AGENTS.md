@@ -16,7 +16,8 @@ The SE often has no clone. The customer runs `ce discover` / `ce review` /
 the agent and Warden need are copied to tracked `.agents/journeys/`. See
 `CUSTOMER.md`.
 
-Pipeline: `propose → intake → scan|local|snapshot → gap → profile → spec → diff`,
+Discovery: `propose` (heuristic, JS/TS + Python) or `explore` (LLM, any language; task mode
+hands the work to the customer's own agent). Pipeline: `propose|explore → intake → scan|local|snapshot → gap → profile → spec → diff`,
 plus `grade`/`eval`/`runtime` for verifying the spec works and `registry` for
 OTel semconv output. Customer wrappers: `discover` (propose+scan+intake),
 `review` (keep/drop + business_impact), `report` (gap+profile+spec+publish).
@@ -51,6 +52,15 @@ OTel semconv output. Customer wrappers: `discover` (propose+scan+intake),
 9. **Provenance on every artifact.** Source-derived vs telemetry-derived vs
    heuristic must be stated in `_provenance`, and heuristics labelled as such
    wherever they surface.
+
+10. **The model proposes, the validator disposes.** In `gap/explore.py` every citation is
+    checked against the repo; confidence is computed, never copied from the model; a journey
+    with fewer than two grounded steps is dropped. Do not add a path that trusts model output.
+11. **A correlation key identifies one journey.** `ce intake` merges candidates that share
+    one, so `explore` namespaces collisions. A shared `organization.slug` once merged two
+    journeys into one.
+12. **Measure discovery changes.** Run `bench/score.py` against `bench/ground_truth/` before
+    and after touching `signals.py`, `explore.py` or `propose.py`.
 
 ## External facts already verified — do not re-litigate
 

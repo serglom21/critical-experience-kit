@@ -1,0 +1,18 @@
+# Ground truth for MetaMask/metamask-extension, labeled BEFORE any new discovery code existed.
+# Basis: `tier: e2e` = dedicated suites under test/e2e/tests/<area>/.
+#        `tier: code` = revenue/identity flows with a dedicated ui/pages area but thinner e2e.
+repo: metamask
+journeys:
+  - {id: onboarding,        tier: e2e,  aliases: [onboarding, create_wallet, import_wallet, seedless, srp], anchors: [test/e2e/tests/onboarding, test/e2e/tests/seedless-onboarding, ui/pages/onboarding-flow, ui/pages/create-password-form, app/scripts/controllers/onboarding]}
+  - {id: send,              tier: e2e,  aliases: [send, transfer],                    anchors: [test/e2e/tests/send, ui/pages/confirmations/send, ui/pages/confirmations/send-utils]}
+  - {id: swap-bridge,       tier: e2e,  aliases: [swap, swaps, bridge, exchange],     anchors: [test/e2e/tests/swaps, test/e2e/tests/bridge, ui/pages/swaps, ui/pages/bridge]}
+  - {id: dapp-connect,      tier: e2e,  aliases: [connect, connection, permission, permissions, dapp, provider], anchors: [test/e2e/tests/connections, test/e2e/tests/dapp-interactions, ui/pages/permissions-connect, app/scripts/controllers/permissions]}
+  - {id: confirmations,     tier: e2e,  aliases: [confirmation, confirmations, signature, sign, approve, transaction], anchors: [test/e2e/tests/confirmations, test/e2e/tests/transaction, ui/pages/confirmations/confirm, ui/pages/confirmations/confirmation]}
+  - {id: account-management,tier: e2e,  aliases: [account, accounts, keyring, srp_account], anchors: [test/e2e/tests/account, test/e2e/tests/multichain-accounts, ui/pages/multichain-accounts, ui/pages/create-account, ui/pages/keychains]}
+  - {id: unlock-reset,      tier: e2e,  aliases: [unlock, lock, reset, forgot_password, vault], anchors: [test/e2e/tests/reset-wallet, test/e2e/tests/vault-corruption, ui/pages/unlock-page, ui/pages/lock]}
+  - {id: hardware-wallets,  tier: e2e,  aliases: [hardware, ledger, trezor, qr],      anchors: [test/e2e/tests/hardware-wallets, ui/pages/hardware-wallets, test/e2e/tests/qr-sync]}
+  - {id: network,           tier: e2e,  aliases: [network, networks, chain, rpc],     anchors: [test/e2e/tests/network, ui/pages/networks]}
+  - {id: tokens-assets,     tier: e2e,  aliases: [token, tokens, asset, assets, nft], anchors: [test/e2e/tests/tokens, test/e2e/tests/assets, ui/pages/asset, ui/pages/token-management, ui/pages/custom-token-import]}
+  - {id: perps,             tier: e2e,  aliases: [perp, perps, trading],              anchors: [test/e2e/tests/perps, ui/pages/perps, app/scripts/controllers/perps]}
+  - {id: shield,            tier: code, aliases: [shield, subscription],              anchors: [test/e2e/tests/shield, ui/pages/shield]}
+  - {id: ramps-buy,         tier: code, aliases: [ramp, ramps, buy, onramp],          anchors: [ui/pages/ramps]}

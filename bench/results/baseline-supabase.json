@@ -1,0 +1,54 @@
+{
+  "truth_total": 14,
+  "proposed_total": 5,
+  "at": [
+    {
+      "k": 5,
+      "proposed": 5,
+      "recall": 0.0,
+      "precision": 0.0,
+      "recall_by_tier": {
+        "code": 0.0,
+        "e2e": 0.0
+      },
+      "truth_covered": []
+    },
+    {
+      "k": 5,
+      "proposed": 5,
+      "recall": 0.0,
+      "precision": 0.0,
+      "recall_by_tier": {
+        "code": 0.0,
+        "e2e": 0.0
+      },
+      "truth_covered": []
+    }
+  ],
+  "unmatched_proposals": [
+    "example",
+    "studio",
+    "ui",
+    "www",
+    "doc"
+  ],
+  "missed_truth": [
+    "auth-users",
+    "billing",
+    "cron-jobs",
+    "database-schema",
+    "edge-functions",
+    "logs",
+    "org-invite",
+    "project-creation",
+    "realtime",
+    "rls-policies",
+    "sign-in",
+    "sql-editor",
+    "storage",
+    "table-editor"
+  ],
+  "evidence_ok": 1.0,
+  "evidence_cited": 24,
+  "evidence_missing_sample": []
+}

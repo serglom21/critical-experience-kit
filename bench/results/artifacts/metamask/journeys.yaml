@@ -1,0 +1,325 @@
+version: 1
+journeys:
+- id: wallet_onboarding
+  name: Create or import a wallet
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. Establishes the vault that holds the user''s keys; failure here blocks
+    a new user entirely. Corroborated by: e2e, analytics. Grounded steps: 100%.'
+  steps:
+  - id: set_password
+    evidence: "User sets a password and accepts terms \u2014 ui/pages/onboarding-flow/create-password/create-password.tsx:368\
+      \ handleCreatePassword; ui/pages/onboarding-flow/create-password/create-password.tsx:256 handleCreateNewWallet"
+    surface: browser
+  - id: create_vault
+    evidence: "New vault and recovery phrase created (social path syncs to the seedless service) \u2014\
+      \ ui/pages/onboarding-flow/onboarding-flow.tsx:257 handleCreateNewAccount; ui/store/actions.ts:1196\
+      \ createNewVaultAndGetSeedPhrase"
+    surface: browser
+  - id: restore_vault
+    evidence: "Import path restores a vault from a recovery phrase \u2014 ui/pages/onboarding-flow/onboarding-flow.tsx:360\
+      \ createNewVaultAndRestore; ui/store/actions.ts:1149 createNewVaultAndRestore"
+    surface: browser
+  - id: complete_onboarding
+    evidence: "Onboarding marked complete \u2014 ui/pages/onboarding-flow/onboarding-flow.tsx:328 setCompletedOnboarding;\
+      \ ui/pages/onboarding-flow/onboarding-flow.tsx:343 completeOnboarding"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Recovery phrase confirmation and metrics-consent steps were not traced'
+  - 'Open question from explorer: Seedless/social login path only partly read'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  correlation_key:
+    attribute: onboarding.flow_id
+  outcome:
+    attribute: onboarding.outcome
+    values:
+    - completed
+    - abandoned
+    - failed
+  actor_segment:
+  - attribute: first_time_flow_type
+- id: unlock_wallet
+  name: Unlock the wallet
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. Every session begins here; failures lock users out of funds. Corroborated
+    by: e2e. Grounded steps: 67%.'
+  steps:
+  - id: submit_password
+    evidence: "Password form submitted \u2014 ui/pages/unlock-page/unlock-page.component.tsx:300 handleSubmit"
+    surface: browser
+  - id: verify_password
+    evidence: "Background verifies and decrypts the vault \u2014 ui/store/actions.ts:1241 submitPassword"
+    surface: browser
+  - id: reset_password
+    evidence: "Forgot-password path \u2014 ui/pages/unlock-page/reset-password-modal.tsx"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Passkey unlock path was not read'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  outcome:
+    attribute: unlock.outcome
+    values:
+    - unlocked
+    - wrong_password
+    - reset
+- id: confirm_transaction_or_signature
+  name: Review and confirm a transaction or signature
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. The consent point for every on-chain action and dapp signature. Corroborated
+    by: e2e, analytics. Grounded steps: 67%.'
+  steps:
+  - id: render_confirmation
+    evidence: "Confirmation screen shown with alerts \u2014 ui/pages/confirmations/confirm/confirm.tsx"
+    surface: browser
+  - id: confirm
+    evidence: "User confirms; transaction confirm hook runs \u2014 ui/pages/confirmations/components/confirm/footer/footer.tsx:323\
+      \ onTransactionConfirm; ui/pages/confirmations/components/confirm/footer/footer.tsx:168 onSubmit"
+    surface: browser
+  - id: cancel
+    evidence: "User rejects or cancels \u2014 ui/pages/confirmations/hooks/useConfirmActions.ts:50 onCancel"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  outcome:
+    attribute: confirmation.outcome
+    values:
+    - confirmed
+    - rejected
+    - failed
+  actor_segment:
+  - attribute: confirmation_type
+- id: swap_or_bridge
+  name: Swap or bridge assets
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. Revenue-generating, multi-step cross-chain flow with quotes and signatures.
+    Corroborated by: e2e, analytics, docs. Grounded steps: 100%.'
+  steps:
+  - id: request_quotes
+    evidence: "Quote request parameters updated as the user edits \u2014 ui/pages/bridge/prepare/prepare-bridge-page.tsx:376\
+      \ updateQuoteRequestParams"
+    surface: browser
+  - id: submit_cta
+    evidence: "User submits the active quote \u2014 ui/pages/bridge/prepare/bridge-cta-button.tsx:162\
+      \ submitBridgeTransaction; ui/pages/bridge/prepare/bridge-cta-button.tsx:59 useSubmitBridgeTransaction"
+    surface: browser
+  - id: submit_quote
+    evidence: "Quote turned into transaction(s) and submitted \u2014 ui/hooks/bridge/useSubmitBridgeTransaction.ts:126\
+      \ submitQuote; ui/hooks/bridge/useSubmitBridgeTransaction.ts:228 submitBridgeTransaction"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Legacy swaps page (ui/pages/swaps) not traced'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  outcome:
+    attribute: swap.outcome
+    values:
+    - completed
+    - failed
+    - cancelled
+  magnitude:
+  - attribute: swap.amount_usd
+    type: double
+  actor_segment:
+  - attribute: source_chain
+  - attribute: dest_chain
+- id: connect_dapp
+  name: Connect a dapp
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. Gate for every dapp interaction; permission bugs expose accounts. Corroborated
+    by: e2e. Grounded steps: 100%.'
+  steps:
+  - id: review_request
+    evidence: "User reviews the requested accounts and chains \u2014 ui/pages/permissions-connect/permissions-connect.tsx:517\
+      \ onSubmit"
+    surface: browser
+  - id: approve_permissions
+    evidence: "Permissions granted \u2014 ui/pages/permissions-connect/permissions-connect.tsx:485 approvePermissionsRequestAction"
+    surface: browser
+  - id: reject_permissions
+    evidence: "Request rejected \u2014 ui/pages/permissions-connect/permissions-connect.tsx:474 rejectPermissionsRequestAction"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Background permission controller not read'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  outcome:
+    attribute: connect.outcome
+    values:
+    - approved
+    - rejected
+- id: add_network
+  name: Add and switch networks
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. Wrong network config sends funds to the wrong chain. Corroborated by:
+    e2e, analytics. Grounded steps: 100%.'
+  steps:
+  - id: add_network
+    evidence: "Popular network added \u2014 ui/components/multichain/network-list-menu/popular-network-list/popular-network-list.tsx:182\
+      \ addNetwork"
+    surface: browser
+  - id: switch_network
+    evidence: "Active network switched \u2014 ui/components/multichain/network-list-menu/network-list-menu.tsx:477\
+      \ setActiveNetwork"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Custom RPC add form not traced'
+  actor_segment:
+  - attribute: chain_id
+- id: import_token_or_nft
+  name: Import tokens and NFTs
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. Asset visibility; spoofed or failed imports mislead users about balances.
+    Corroborated by: e2e, analytics. Grounded steps: 100%.'
+  steps:
+  - id: import_token
+    evidence: "Custom token imported \u2014 ui/pages/custom-token-import/custom-token-import.tsx:499 addImportedTokens"
+    surface: browser
+  - id: import_nft
+    evidence: "NFT imported after verifying ownership \u2014 ui/components/multichain/import-nfts-modal/import-nfts-form.tsx:159\
+      \ addNftVerifyOwnership"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+- id: subscribe_shield
+  name: Subscribe to Shield
+  source: discovered:code
+  confidence: high
+  notes: 'Explored from metamask. Paid subscription checkout; failures lose revenue and strand paying
+    users. Corroborated by: e2e. Grounded steps: 100%.'
+  steps:
+  - id: start_checkout
+    evidence: "Subscription started with card through a hosted checkout session \u2014 app/scripts/services/subscription/shield-subscription-service.ts:174\
+      \ startSubscriptionWithCard"
+    surface: browser
+  - id: controller_call
+    evidence: "Controller creates the checkout session \u2014 app/scripts/services/subscription/shield-subscription-service.ts:190\
+      \ SubscriptionController:startSubscriptionWithCard"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Crypto payment path and polling not read'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  correlation_key:
+    attribute: subscription.checkout_session
+  outcome:
+    attribute: shield.outcome
+    values:
+    - subscribed
+    - cancelled
+    - failed
+  actor_segment:
+  - attribute: payment_method
+- id: send_assets
+  name: Send tokens or NFTs
+  source: discovered:code
+  confidence: medium
+  notes: 'Explored from metamask. Moves user funds; address poisoning or amount bugs cause irreversible
+    loss. Corroborated by: e2e. Grounded steps: 50%.'
+  steps:
+  - id: validate_amount
+    evidence: "Amount validated against balance and gas \u2014 ui/pages/confirmations/hooks/send/useAmountValidation.ts"
+    surface: browser
+  - id: check_recipient
+    evidence: "Recipient checked for address poisoning \u2014 ui/pages/confirmations/hooks/send/useAddressPoisoningDetection.ts"
+    surface: browser
+  - id: submit_send
+    evidence: "Send submitted, then routed to loader and confirmation \u2014 ui/pages/confirmations/hooks/send/useSendActions.ts:61\
+      \ handleSubmit; ui/pages/confirmations/hooks/send/useSendActions.ts:103 navigate"
+    surface: browser
+  - id: land_on_activity
+    evidence: "User lands on activity after submit \u2014 ui/pages/confirmations/hooks/send/useSendActions.ts:141\
+      \ ACTIVITY_ROUTE"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Bitcoin and Tron send variants not traced'
+  - "Outcome values were proposed by the explorer \u2014 confirm them and set success_values."
+  outcome:
+    attribute: send.outcome
+    values:
+    - submitted
+    - cancelled
+    - failed
+  magnitude:
+  - attribute: send.amount_usd
+    type: double
+  actor_segment:
+  - attribute: asset_type
+  - attribute: chain_id
+- id: manage_accounts
+  name: Add accounts and export keys
+  source: discovered:code
+  confidence: medium
+  notes: 'Explored from metamask. Account creation and private-key export are high-risk identity operations.
+    Corroborated by: e2e. Grounded steps: 50%.'
+  steps:
+  - id: import_account
+    evidence: "Account imported by strategy \u2014 ui/store/actions.ts:1346 importNewAccount"
+    surface: browser
+  - id: export_private_key
+    evidence: "Private keys revealed or exported \u2014 ui/components/multichain-accounts/multichain-private-key-list/multichain-private-key-list.tsx"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Multichain account group creation not traced'
+- id: hardware_wallet_signing
+  name: Sign with a hardware wallet
+  source: discovered:code
+  confidence: medium
+  notes: 'Explored from metamask. Device disconnects and rejections strand in-flight transactions. Corroborated
+    by: e2e, analytics. Grounded steps: 0%.'
+  steps:
+  - id: sign_tracking
+    evidence: "Signing progress tracked for batches \u2014 ui/hooks/hardware-wallets/hw-sign-tracker/batch-tracking-strategy.ts"
+    surface: browser
+  - id: swap_actions
+    evidence: "Swap actions on a hardware device \u2014 ui/hooks/hardware-wallets/useHwSwapActions.ts"
+    surface: browser
+  - id: device_events
+    evidence: "Device connect/disconnect events handled \u2014 ui/contexts/hardware-wallets/HardwareWalletEventHandlers.tsx"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Entry-to-effect path not traced; evidence is file-level only'
+- id: perps_trading
+  name: Trade perpetuals
+  source: discovered:code
+  confidence: medium
+  notes: 'Explored from metamask. Leveraged trading; order and close failures cost users money directly.
+    Corroborated by: e2e. Grounded steps: 33%.'
+  steps:
+  - id: perps_view
+    evidence: "User views positions and orders \u2014 ui/components/app/perps/perps-view.tsx"
+    surface: browser
+  - id: close_position
+    evidence: "Close-position modal \u2014 ui/components/app/perps/close-position/close-position-modal.tsx"
+    surface: browser
+  - id: controller_infra
+    evidence: "Perps controller infrastructure handles orders and withdrawals \u2014 app/scripts/controllers/perps/infrastructure.ts:121\
+      \ placeOrder"
+    surface: browser
+  needs_clarification:
+  - "business_impact is unset \u2014 a human must assign it. Nothing in source says which flow earns revenue."
+  - "Step order and boundaries were proposed by reading code, not observed at runtime \u2014 confirm."
+  - 'Open question from explorer: Order placement path not traced; evidence is file-level for two steps'

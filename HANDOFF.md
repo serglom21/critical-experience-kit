@@ -207,6 +207,13 @@ thing. All have regression tests.
 | `gap/propose.py` | Substring hint matching | `"view"` inside `"review"` → refund ordered review → request → settle |
 | `gap/propose.py` | Hint-sorted route-derived steps | `shipping` (no lifecycle verb) landed after `payment` and `confirm` |
 | `registry_gen/generate.py` | Backticks in a bare mapping value | Emitted invalid YAML; caught by its own validator on first run |
+| `gap/signals.py` | `features/` counted as an e2e dir | `apps/docs/features/` source code drowned the real suites |
+| `gap/signals.py` | Colocated unit tests grouped with e2e | Component tests outranked `e2e/studio/features` |
+| `gap/signals.py` | Sink presence, not density | Every dir "touched payments" because a regex matched the word; marketing sites ranked hot |
+| `gap/explore.py` | Corroboration credited "a `track()` call is in a cited file" | True of nearly every file, so every journey was `high` |
+| `gap/explore.py` | One shared common word corroborated | `api-access-toggle` corroborated "Create access tokens" |
+| `gap/explore.py` | Shared `organization.slug` correlation key | `ce intake` merged two journeys into one, silently |
+| `bench/score.py` | Prose such as `connect/disconnect` read as a path | Reported a hallucinated file that was never cited |
 | `cli.py` | Wrote `.ce-observed.json` to cwd | Litter in `git status` next to src/. Now: only under `ce-work/`, gitignored |
 | `pyproject.toml` | Declared `>=3.10` on an assumption | Locked out a managed 3.9 install for no reason |
 
@@ -248,7 +255,8 @@ Ordered by how much they would matter to a customer.
 1. **The generated spec's API section is JS and Python.** Go still missing.
 2. **`ce grade` static analysis is JS/TS-only.** `ce local` and `ce gap` are
    language-agnostic; the authoring and grading side is not.
-3. **`ce propose` covers JS/TS and Python.** Go, Ruby, Java, .NET produce nothing.
+3. **`ce propose` covers JS/TS and Python.** Go, Ruby, Java, .NET produce nothing — use
+   `ce explore` (any language). `ce discover` only gates on language for the heuristic.
 4. **`weaver registry check` never run.** The binary was not installable in the
    build environment; `registry_gen/validate.py` substitutes with the official
    semconv JSON schema plus Weaver's in-code constraints. Run the real thing once.
@@ -278,6 +286,42 @@ Ordered by how much they would matter to a customer.
   the profile degrades without it.
 - **The Python floor** → `pyproject.toml`, `cli.py::MIN_PYTHON`, and
   `test_py39_compat.py::FLOOR` must agree; the test enforces it.
+
+## 9b. Discovery v2: `signals` + `explore` (Nov 2026)
+
+**Why.** Run on Supabase and MetaMask, `propose` returned app folders and icon components
+(0 of 14 truth journeys in its top 5 on Supabase). Its rules are static: a fixed domain
+vocabulary, regexes for Express/Flask-style routes, directory names as domains, exported
+functions as steps. Real repos are layered, monorepo, message-driven (MetaMask has no HTTP
+routes) and in other languages. `eval/` also never measured discovery, so there was no
+number to improve.
+
+**What replaced it.**
+- `gap/signals.py` — language-agnostic evidence: e2e spec names (humans already wrote the
+  flows down), analytics event names, docs headings, cross-language entry-point and sink
+  hints per directory. Hints locate where to read; they prove nothing.
+- `gap/explore.py` — an explorer reads the repo and returns `discovery.json`
+  (journeys → ordered steps → cited file/line/symbol). Three delivery modes: `task` (emit a
+  task for the customer's own agent — nothing leaves their machine), `openrouter` (tool
+  loop with list/read/grep, repo-confined, secrets invisible), `ingest` (validate what an
+  agent wrote). The validator drops unverifiable evidence and ungrounded journeys and
+  computes confidence from grounding plus independent corroboration.
+- `bench/` — ground truth, scorer, results. See `bench/README.md` for numbers and caveats.
+
+**Result.** Supabase 0.86 recall / 0.93 precision (was 0.36 / 0.25 at a 30-journey cap);
+MetaMask 0.92 / 1.00 (was 0.69 / 0.43). n = 2 and not blind — see the caveats there.
+
+**Not done / not verified.**
+- The OpenRouter loop has never run live; only fake-model tests. The default model id
+  (`anthropic/claude-sonnet-5.5`) could not be confirmed against OpenRouter's list from the
+  build sandbox — check https://openrouter.ai/models and set `CE_EXPLORER_MODEL`.
+- Benchmark is two TS repos. Add Go/Python/Ruby/Java repos, labeled blind.
+- Step order and boundaries come from reading code, not execution; every candidate says so.
+- The spec generator's SDK section is still JS/Python only, so a Go service gets journeys
+  but a thin §5/§6.
+- Explorer coverage is bounded by its tool budget; it missed `logs`/`realtime` on Supabase.
+- `hot_dirs` ranking is noisy; treat it as a hint. e2e names and analytics events carry the
+  signal.
 
 ## 10. Next builds, in order
 

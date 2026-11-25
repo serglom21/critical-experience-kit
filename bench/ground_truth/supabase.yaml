@@ -1,0 +1,22 @@
+# Ground truth for supabase/supabase, labeled BEFORE any new discovery code existed.
+# Basis: `tier: e2e` = the repo's own Playwright suite exercises it (e2e/studio/features/*).
+#        `tier: code` = not in e2e, but a revenue/identity flow evidenced by a dedicated
+#        interface directory (Billing/Stripe, ProjectCreation, SignIn, OrganizationInvite).
+# Matching (bench/score.py): a proposed journey matches if >=1 of its cited evidence files
+# lies under an anchor, OR its id/name contains an alias token. Anchors are the primary key.
+repo: supabase
+journeys:
+  - {id: table-editor,      tier: e2e,  aliases: [table_editor, table, row, column],  anchors: [apps/studio/components/interfaces/TableGridEditor, apps/studio/components/grid, e2e/studio/features/table-editor]}
+  - {id: sql-editor,        tier: e2e,  aliases: [sql_editor, sql, query],            anchors: [apps/studio/components/interfaces/SQLEditor, e2e/studio/features/sql-editor]}
+  - {id: auth-users,        tier: e2e,  aliases: [auth, user, users],                 anchors: [apps/studio/components/interfaces/Auth, e2e/studio/features/auth-user]}
+  - {id: storage,           tier: e2e,  aliases: [storage, bucket, file],             anchors: [apps/studio/components/interfaces/Storage, e2e/studio/features/storage]}
+  - {id: edge-functions,    tier: e2e,  aliases: [edge, function, functions],         anchors: [apps/studio/components/interfaces/EdgeFunctions, apps/studio/components/interfaces/Functions, e2e/studio/features/edge-functions]}
+  - {id: rls-policies,      tier: e2e,  aliases: [rls, policy, policies],             anchors: [apps/studio/components/interfaces/Auth/Policies, e2e/studio/features/rls-policies]}
+  - {id: database-schema,   tier: e2e,  aliases: [database, schema, migration, index, trigger], anchors: [apps/studio/components/interfaces/Database, e2e/studio/features/database.spec]}
+  - {id: realtime,          tier: e2e,  aliases: [realtime, channel, inspector],      anchors: [apps/studio/components/interfaces/Realtime, e2e/studio/features/realtime]}
+  - {id: logs,              tier: e2e,  aliases: [log, logs, observability],          anchors: [apps/studio/components/interfaces/UnifiedLogs, apps/studio/components/interfaces/LogDrains, e2e/studio/features/logs]}
+  - {id: cron-jobs,         tier: e2e,  aliases: [cron, job, jobs, queue],            anchors: [apps/studio/components/interfaces/Integrations/CronJobs, e2e/studio/features/cron-jobs]}
+  - {id: project-creation,  tier: code, aliases: [project_creation, new_project, create_project], anchors: [apps/studio/components/interfaces/ProjectCreation, apps/studio/pages/new]}
+  - {id: billing,           tier: code, aliases: [billing, subscription, invoice, payment, stripe, plan], anchors: [apps/studio/components/interfaces/Billing, apps/studio/components/interfaces/Organization/BillingSettings]}
+  - {id: sign-in,           tier: code, aliases: [sign_in, signin, login, sso],       anchors: [apps/studio/components/interfaces/SignIn, apps/studio/pages/sign-in]}
+  - {id: org-invite,        tier: code, aliases: [invite, invitation, org_invite, organization], anchors: [apps/studio/components/interfaces/OrganizationInvite]}

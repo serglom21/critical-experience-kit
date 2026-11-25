@@ -21,7 +21,9 @@ critical-experience-kit/
 │   ├── analyze.py                     journey diff + score
 │   ├── diff.py                        before/after visibility diff
 │   ├── instrumentation_profile.py     automatic vs custom + recommendations
-│   ├── propose.py                     source → journey CANDIDATES (discovered:code)
+│   ├── propose.py                     source → journey CANDIDATES (heuristic; JS/TS + Python)
+│   ├── signals.py                     language-agnostic evidence brief (e2e, analytics, docs)
+│   ├── explore.py                     LLM discovery: task mode / OpenRouter / ingest + validator
 │   ├── code_scan.py                   source → observed.json (no telemetry needed)
 │   ├── sentry_source.py               live org → observed.json (org/project scoped)
 │   ├── test_*.py                      155 tests, passing
@@ -44,6 +46,7 @@ critical-experience-kit/
 │       ├── run_runtime.py             boot → drive → capture → analyze
 │       ├── test_collector.py          24 tests, passing
 │       └── tasks/checkout-js/         real @sentry/node app, 3 variants
+├── bench/                             ← discovery benchmark: ground truth + scorer + results
 ├── test_pipeline.py                   ← seam tests across all layers (15)
 ├── registry/                          ← generated exemplar (checkout)
 │   ├── manifest.yaml
@@ -132,6 +135,33 @@ ce local --resolved resolved.json --journey checkout \
 ```
 
 **No Sentry account needed, and language-agnostic** — the DSN is the only contract. Verified end to end against a Python service using `sentry-sdk` and a Node service using `@sentry/node`. Use `--dsn-env` if your stack reads a different variable.
+
+### Discovering journeys in any language: `ce explore`
+
+`ce propose` guesses journeys from directory and function names in JS/TS and Python. On
+real repos that failed (see `bench/README.md`: Supabase 0 of 14 in its top 5). `ce explore`
+replaces guessing with evidence + reading, and works on any language:
+
+```bash
+ce signals --repo . --brief ce-work/signals.md          # e2e names, analytics, docs, hot dirs
+
+# A. the customer's own agent/model does the reading (nothing leaves their machine)
+ce explore --repo . --mode task --out ce-work           # writes ce-work/discovery-task.md
+#    their agent reads the repo, writes ce-work/discovery.json, then:
+ce explore --repo . --ingest ce-work/discovery.json --out ce-work
+
+# B. an LLM explores here via OpenRouter
+export OPENROUTER_API_KEY=...                           # model: --model or CE_EXPLORER_MODEL
+ce explore --repo . --mode openrouter --out ce-work
+
+# either way it plugs into the normal flow
+ce discover --explorer {task|openrouter|ingest} [--discovery ce-work/discovery.json]
+```
+
+The model **proposes**; a mechanical validator **disposes**. Every cited file must exist,
+the symbol must be in it, the line in range. Journeys with fewer than two grounded steps are
+dropped. Confidence is *computed* (grounded steps + independent e2e/analytics/docs
+corroboration) and never taken from the model. `business_impact` stays unset.
 
 ### Three starting states, all supported
 
