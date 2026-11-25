@@ -53,3 +53,16 @@ directory), so the kept evidence is 100% real by construction.
 4. Matching is by cited files and name tokens. It does not grade **step quality or order**;
    steps were proposed by reading code and are flagged "confirm" in every candidate.
 5. The baseline is scored generously (alias matching) and was given a 30-journey cap.
+
+## Live OpenRouter run (25 Nov 2026, `anthropic/claude-sonnet-5.5`, before the seed gate)
+
+| Repo | Recall | Precision | Proposals | Turns / calls | Cost |
+|---|---|---|---|---|---|
+| supabase | 0.286 | 0.700 | 10 | 11 / 41 | $0.835 |
+| metamask | 0.462 | 0.875 | 8 | 18 / 57 | $0.716 |
+
+Far below the in-session run (0.857 / 0.923). Neither run neared the turn cap: the model
+submitted early and ignored all 27 Supabase e2e groups. Fix: numbered e2e "seeds" in the
+brief, a required `seed_coverage` in the output, and a mechanical gate in `run_agent` that
+bounces a submission (max 2 times) until every seed is mapped to a journey or rejected with
+a reason. Re-run both repos to see whether the gate closes the gap; record results here.

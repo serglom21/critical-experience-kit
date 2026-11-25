@@ -279,6 +279,82 @@ class TestAgentLoop(unittest.TestCase):
                          {"journeys": []})
 
 
+SIGNALS = {"e2e_groups": [{"dir": "e2e/billing", "files": 2, "stems": ["upgrade"]},
+                          {"dir": "e2e/storage", "files": 3, "stems": ["upload"]}]}
+
+
+def submit(doc, cid="s"):
+    return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+        {"id": cid, "function": {"name": "submit_discovery", "arguments": json.dumps({"discovery": doc})}}]}}]}
+
+
+class TestSeedGate(unittest.TestCase):
+    """A live run proposed 0 of 10 Supabase e2e journeys despite 27 e2e groups in its brief.
+    Submission is now refused until each seed is covered or rejected with a reason."""
+
+    def test_unaccounted_lists_missing_seeds(self):
+        doc = {"journeys": [journey()], "seed_coverage": [{"seed": "S1", "journey": "checkout"}]}
+        self.assertEqual([m["id"] for m in ex.unaccounted(doc, SIGNALS)], ["S2"])
+
+    def test_coverage_pointing_at_a_nonexistent_journey_does_not_count(self):
+        doc = {"journeys": [journey()], "seed_coverage": [{"seed": "S1", "journey": "ghost"},
+                                                          {"seed": "S2", "rejected": "x"}]}
+        self.assertEqual([m["id"] for m in ex.unaccounted(doc, SIGNALS)], ["S1", "S2"])
+
+    def test_reasoned_rejection_counts(self):
+        doc = {"journeys": [], "seed_coverage": [
+            {"seed": "S1", "rejected": "test tooling, not a business flow"},
+            {"seed": "S2", "rejected": "marketing site checks only"}]}
+        self.assertEqual(ex.unaccounted(doc, SIGNALS), [])
+
+    def test_no_e2e_signals_means_nothing_to_account_for(self):
+        self.assertEqual(ex.unaccounted({"journeys": []}, {"e2e_groups": []}), [])
+
+    def test_agent_bounces_incomplete_submit_then_accepts_complete_one(self):
+        root = make_repo(REPO)
+        replies = [submit({"journeys": [journey()]}),
+                   submit({"journeys": [journey()], "seed_coverage": [
+                       {"seed": "S1", "journey": "checkout"},
+                       {"seed": "S2", "rejected": "not a business flow at all"}]})]
+        seen = []
+
+        def chat(msgs):
+            seen.append(msgs[-1])
+            return replies[len(seen) - 1]
+
+        doc = ex.run_agent(root, "b", "m", "k", 5, chat=chat, log=lambda *_: None, signals=SIGNALS)
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(seen[1]["role"], "tool")
+        self.assertIn("S1", seen[1]["content"])
+        self.assertEqual(len(doc["seed_coverage"]), 2)
+
+    def test_gate_gives_up_after_two_bounces(self):
+        root = make_repo(REPO)
+        n = {"i": 0}
+
+        def chat(msgs):
+            n["i"] += 1
+            return submit({"journeys": [journey()]}, cid=str(n["i"]))
+
+        doc = ex.run_agent(root, "b", "m", "k", 5, chat=chat, log=lambda *_: None, signals=SIGNALS)
+        self.assertEqual(n["i"], 3)          # two bounces, third accepted as is
+        self.assertEqual(len(doc["journeys"]), 1)
+
+    def test_unaccounted_seeds_reach_the_report(self):
+        root = make_repo(REPO)
+        _, report = ex.validate({"journeys": [journey()]}, root, SIGNALS)
+        self.assertEqual(len(report["unaccounted_seeds"]), 2)
+        self.assertIn("e2e/storage", "\n".join(report["unaccounted_seeds"]))
+
+    def test_token_usage_is_logged(self):
+        root = make_repo(REPO)
+        lines = []
+        chat = lambda msgs: {"usage": {"prompt_tokens": 100, "completion_tokens": 7},
+                             "choices": [{"message": {"role": "assistant", "content": '{"journeys": []}'}}]}
+        ex.run_agent(root, "b", "m", "k", 5, chat=chat, log=lines.append)
+        self.assertTrue(any("100 in / 7 out" in l for l in lines))
+
+
 class TestCli(unittest.TestCase):
     def test_task_mode_emits_task_without_network_or_key(self):
         root = make_repo({"src/a.go": "package main\nfunc Checkout() {}\n", "e2e/checkout.spec.ts": "test('pays', () => {})\n"})

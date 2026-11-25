@@ -759,7 +759,7 @@ def cmd_discover(argv: list[str]) -> int:
                 return 1
             ex += ["--ingest", str(resolve_path(args.discovery))]
         else:
-            ex += ["--mode", "openrouter", "--max-journeys", str(max(args.max_journeys, 12))]
+            ex += ["--mode", "openrouter", "--max-journeys", str(max(args.max_journeys, 20))]
             if args.model:
                 ex += ["--model", args.model]
         rc = delegate(STAGES["explore"], ex)

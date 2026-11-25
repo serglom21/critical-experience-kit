@@ -103,7 +103,12 @@ Not a journey: a page, a component, a utility, a settings toggle, a design-syste
   that several journeys would reuse. Omit it if no such identifier exists.
 - If you are unsure of something, say so in `open_questions` instead of inventing it.
   Outcome values and correlation keys are PROPOSALS a human will confirm.
-- Return at most {max_journeys} journeys. Fewer, well-evidenced journeys beat many thin ones.
+- Return at most {max_journeys} journeys. Well-evidenced beats thin, but do not drop a real
+  journey to stay short: several seeds may be one journey, and one seed may hold several.
+- **Account for every seed.** The brief lists numbered E2E seeds (S1, S2, …). Each is a flow
+  humans already wrote down. For every seed add a `seed_coverage` entry: either the `journey`
+  id that covers it, or a `rejected` reason (not consequence-bearing, test tooling, marketing
+  site, …). Output that skips seeds is sent back to you before it is accepted.
 
 ## Output: a single JSON object
 ```json
@@ -126,6 +131,10 @@ Not a journey: a page, a component, a utility, a settings toggle, a design-syste
       "actor_segment": [{{"attribute": "plan_tier"}}],
       "open_questions": ["anything you could not verify"]
     }}
+  ],
+  "seed_coverage": [
+    {{"seed": "S1", "journey": "snake_case_id"}},
+    {{"seed": "S2", "rejected": "why this is not a consequence-bearing journey"}}
   ]
 }}
 ```
@@ -285,6 +294,24 @@ def corroboration(j: dict, signals: dict) -> list:
     return found
 
 
+def unaccounted(doc: dict, signals: dict | None, journey_ids=None) -> list:
+    """Seeds the model neither mapped to a (real) journey nor rejected with a reason."""
+    sds = sig.seeds(signals or {})
+    if not sds:
+        return []
+    ids = {snake(j.get("id") or j.get("name") or "") for j in (doc.get("journeys") or [])
+           if isinstance(j, dict)} if journey_ids is None else set(journey_ids)
+    done = set()
+    for c in doc.get("seed_coverage") or []:
+        if not isinstance(c, dict):
+            continue
+        if snake(c.get("journey") or "") in ids and c.get("journey"):
+            done.add(str(c.get("seed")))
+        elif len(str(c.get("rejected") or "").strip()) >= 8:
+            done.add(str(c.get("seed")))
+    return [sd for sd in sds if sd["id"] not in done]
+
+
 def validate(doc: dict, root: Path, signals: dict | None) -> tuple:
     """-> (validated journeys list, report dict). Drops ungrounded work, computes
     confidence, preserves the model's order within a confidence band."""
@@ -337,7 +364,8 @@ def validate(doc: dict, root: Path, signals: dict | None) -> tuple:
         kept.append(j)
     order = {"high": 0, "medium": 1, "low": 2}
     kept.sort(key=lambda j: (order[j["confidence"]], j["model_rank"]))
-    return kept, {"dropped": dropped, **stats}
+    miss = unaccounted(doc, signals, journey_ids=ids)
+    return kept, {"dropped": dropped, "unaccounted_seeds": [f"{m['id']} {m['dir']}" for m in miss], **stats}
 
 
 def to_candidates(journeys: list, repo_name: str) -> dict:
@@ -416,6 +444,11 @@ def render_report(journeys: list, report: dict, repo_name: str, mode: str) -> st
             L.append(f"{k}. **{s['id']}** — {s['description']} ({cite})")
         for q in j["open_questions"]:
             L.append(f"- ❓ {q}")
+    if report.get("unaccounted_seeds"):
+        L += ["", "## E2E seeds nobody accounted for", "",
+              "These test groups were in the brief but the explorer neither mapped them to a journey "
+              "nor rejected them with a reason. Treat them as coverage gaps.", ""]
+        L += [f"- {m}" for m in report["unaccounted_seeds"]]
     if report["dropped"]:
         L += ["", "## Dropped", ""]
         L += [f"- `{d['id']}`: {d['reason']}" for d in report["dropped"]]
@@ -536,10 +569,48 @@ def chat_openrouter(messages: list, model: str, key: str, tools: list) -> dict:
     raise RuntimeError(f"could not reach OpenRouter: {last}")
 
 
+MAX_GATE_ROUNDS = 2
+
+
 def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys: int,
-              chat=None, turns: int = MAX_TURNS, log=print) -> dict:
-    """Tool loop. `chat` is injectable so the loop is testable offline."""
-    chat = chat or (lambda msgs: chat_openrouter(msgs, model, key, TOOL_DEFS))
+              chat=None, turns: int = MAX_TURNS, log=print, signals: dict | None = None) -> dict:
+    """Tool loop. `chat` is injectable so the loop is testable offline.
+
+    A submission is accepted only when every E2E seed in the brief is accounted for
+    (mapped to a journey it submitted, or rejected with a reason). That check is mechanical;
+    the model gets at most MAX_GATE_ROUNDS bounces, then whatever it has is taken as is."""
+    raw_chat = chat or (lambda msgs: chat_openrouter(msgs, model, key, TOOL_DEFS))
+    usage = {"prompt_tokens": 0, "completion_tokens": 0, "requests": 0}
+
+    def chat(msgs):
+        r = raw_chat(msgs)
+        u = r.get("usage") or {}
+        usage["requests"] += 1
+        usage["prompt_tokens"] += int(u.get("prompt_tokens") or 0)
+        usage["completion_tokens"] += int(u.get("completion_tokens") or 0)
+        return r
+
+    def done(doc):
+        log(f"  tokens: {usage['prompt_tokens']} in / {usage['completion_tokens']} out "
+            f"over {usage['requests']} request(s)")
+        return doc
+
+    gate = {"rounds": 0}
+
+    def bounce(doc):
+        """-> message to send back, or None to accept."""
+        if gate["rounds"] >= MAX_GATE_ROUNDS or not isinstance(doc, dict):
+            return None
+        miss = unaccounted(doc, signals)
+        if not miss:
+            return None
+        gate["rounds"] += 1
+        lines = "; ".join(f"{m['id']} `{m['dir']}`" for m in miss[:25])
+        log(f"  gate: {len(miss)} seed(s) unaccounted, sending back (round {gate['rounds']})")
+        return (f"Not accepted yet: {len(miss)} E2E seed(s) have no `seed_coverage` entry: {lines}. "
+                "Read the code behind them, add the journeys they represent, or reject each with a "
+                "reason, then call submit_discovery again with the complete JSON.")
+
     tools = RepoTools(root)
     task = build_task(root.name, brief, max_journeys, agent=True, turns=turns)
     messages = [
@@ -557,7 +628,12 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             m = re.search(r"\{.*\}", msg.get("content") or "", re.S)
             if m:
                 try:
-                    return json.loads(m.group(0))
+                    doc = json.loads(m.group(0))
+                    back = bounce(doc)
+                    if back is None:
+                        return done(doc)
+                    messages.append({"role": "user", "content": back})
+                    continue
                 except ValueError:
                     pass
             messages.append({"role": "user", "content":
@@ -571,7 +647,12 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
                 args = {}
             if fn == "submit_discovery":
                 d = args.get("discovery")
-                return d if isinstance(d, dict) else {"journeys": []}
+                doc = d if isinstance(d, dict) else {"journeys": []}
+                back = bounce(doc)
+                if back is None:
+                    return done(doc)
+                messages.append({"role": "tool", "tool_call_id": c.get("id", fn), "content": back})
+                continue
             if fn in ("list_dir", "read_file", "grep"):
                 try:
                     out = getattr(tools, fn)(**{k: v for k, v in args.items()
@@ -587,10 +668,10 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
     for c in ((resp.get("choices") or [{}])[0].get("message") or {}).get("tool_calls") or []:
         if c["function"]["name"] == "submit_discovery":
             try:
-                return json.loads(c["function"]["arguments"]).get("discovery") or {"journeys": []}
+                return done(json.loads(c["function"]["arguments"]).get("discovery") or {"journeys": []})
             except ValueError:
                 pass
-    return {"journeys": []}
+    return done({"journeys": []})
 
 
 def build_task(repo_name: str, brief: str, max_journeys: int, agent: bool = False,
@@ -626,7 +707,7 @@ def main(argv=None) -> int:
     ap.add_argument("--ingest", metavar="DISCOVERY_JSON",
                     help="validate a discovery.json and write journeys.yaml")
     ap.add_argument("--model", default=os.environ.get("CE_EXPLORER_MODEL", DEFAULT_MODEL))
-    ap.add_argument("--max-journeys", type=int, default=12)
+    ap.add_argument("--max-journeys", type=int, default=20)
     ap.add_argument("--turns", type=int, default=MAX_TURNS)
     args = ap.parse_args(argv)
 
@@ -664,7 +745,8 @@ def main(argv=None) -> int:
         return 2
     print(f"exploring {root.name} with {args.model} …")
     try:
-        doc = run_agent(root, brief, args.model, key, args.max_journeys, turns=args.turns)
+        doc = run_agent(root, brief, args.model, key, args.max_journeys, turns=args.turns,
+                        signals=signals)
     except RuntimeError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
