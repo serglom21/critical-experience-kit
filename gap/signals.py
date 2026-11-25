@@ -355,14 +355,29 @@ def collect(root: Path) -> dict:
     }
 
 
-def seeds(sig: dict, max_e2e: int = 40) -> list:
-    """Numbered e2e groups the explorer must account for (journey or reasoned rejection).
-    The ids are shown in the brief and checked mechanically by gap/explore.py."""
-    return [{"id": f"S{i + 1}", "dir": g["dir"], "files": g["files"], "stems": g["stems"][:14]}
-            for i, g in enumerate(sig.get("e2e_groups", [])[:max_e2e])]
+SUPPORT_STEM = re.compile(r"(^|[._-])(setup|teardown|global|config|helpers?|utils?|mocks?|fixtures?|"
+                          r"enums?|constants?|types?|index|base)([._-]|$)", re.I)
 
 
-def render_brief(sig: dict, max_hot: int = 45, max_e2e: int = 40, max_events: int = 30) -> str:
+def seeds(sig: dict, max_seeds: int = 120, max_stems: int = 40) -> list:
+    """Numbered e2e groups the explorer must account for, stem by stem. Support code
+    (page objects, helpers, examples, marketing sites) is excluded mechanically so the
+    model does not spend judgment on it. Ids appear in the brief and are checked by
+    gap/explore.py."""
+    out = []
+    for g in sig.get("e2e_groups", []):
+        if E2E_SUPPORT.search(g["dir"] + "/") or NOISE_PATH.search(g["dir"]):
+            continue
+        stems = [t for t in g["stems"] if not SUPPORT_STEM.search(t)][:max_stems]
+        if not stems:
+            continue
+        out.append({"id": f"S{len(out) + 1}", "dir": g["dir"], "files": g["files"], "stems": stems})
+        if len(out) >= max_seeds:
+            break
+    return out
+
+
+def render_brief(sig: dict, max_hot: int = 45, max_events: int = 30) -> str:
     L = ["# Repo signals", ""]
     L.append("Languages: " + ", ".join(f"{k} ({v})" for k, v in sig["languages"].items()))
     if sig["dependency_signals"]:
@@ -376,9 +391,9 @@ def render_brief(sig: dict, max_hot: int = 45, max_e2e: int = 40, max_events: in
         L.append("")
     if sig["e2e_groups"]:
         L += ["## E2E / integration tests (humans already wrote these flows down)",
-              "Each seed id below must appear in `seed_coverage` in your output."]
-        for sd in seeds(sig, max_e2e):
-            L.append(f"- **{sd['id']}** `{sd['dir']}` ({sd['files']} files): {', '.join(sd['stems'])}")
+              "Every stem below must be accounted for in `seed_coverage` (see the output spec)."]
+        for sd in seeds(sig):
+            L.append(f"- **{sd['id']}** `{sd['dir']}` ({len(sd['stems'])} stems): {', '.join(sd['stems'])}")
         L.append("")
     if sig["analytics_events"]:
         L += ["## Analytics events (the product team's own funnel names)"]

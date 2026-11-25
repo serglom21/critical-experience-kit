@@ -290,8 +290,8 @@ Ordered by how much they would matter to a customer.
 ## 9b. Discovery v2: `signals` + `explore` (Nov 2026)
 
 > Update 25 Nov: first live OpenRouter run scored well below the in-session run (see
-> `bench/README.md`). Added seed accounting (`signals.seeds`, `explore.unaccounted`, gate in
-> `run_agent`), token logging, and `--max-journeys` default 20. Effect not yet measured live.
+> `bench/README.md`). Added seed accounting (`signals.seeds`, `explore.account` — per test name, judged on
+> validated journeys — and the gate in `run_agent`), token logging, and `--max-journeys` default 20. Effect not yet measured live.
 
 **Why.** Run on Supabase and MetaMask, `propose` returned app folders and icon components
 (0 of 14 truth journeys in its top 5 on Supabase). Its rules are static: a fixed domain

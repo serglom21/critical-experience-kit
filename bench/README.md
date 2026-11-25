@@ -66,3 +66,18 @@ submitted early and ignored all 27 Supabase e2e groups. Fix: numbered e2e "seeds
 brief, a required `seed_coverage` in the output, and a mechanical gate in `run_agent` that
 bounces a submission (max 2 times) until every seed is mapped to a journey or rejected with
 a reason. Re-run both repos to see whether the gate closes the gap; record results here.
+
+## Live run 2 (seed gate v1, directory-level) and the change that followed
+
+| Repo | Recall | Precision | Proposals | Cost |
+|---|---|---|---|---|
+| supabase | 0.357 | 0.714 | 14 | $1.309 |
+| metamask | 0.692 | 0.917 | 12 | $1.475 |
+
+The gate never fired (0 bounces). The model mapped all 32 `e2e/studio/features` tests to one
+journey and rejected 25 of 27 seeds, mostly support code, and the check accepted it. Gate v2:
+support/example dirs and setup stems are excluded from seeds mechanically; every test name
+(stem) must be mapped to a *validated* journey that shares vocabulary with it, or rejected
+with a fixed category (`not_consequence_bearing` needs a verifiable citation); the brief shows
+all stems (it capped at 14 before), and the gate runs on validator output, so a mapping to a
+journey the validator drops no longer counts. Not yet measured live.

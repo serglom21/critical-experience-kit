@@ -105,10 +105,16 @@ Not a journey: a page, a component, a utility, a settings toggle, a design-syste
   Outcome values and correlation keys are PROPOSALS a human will confirm.
 - Return at most {max_journeys} journeys. Well-evidenced beats thin, but do not drop a real
   journey to stay short: several seeds may be one journey, and one seed may hold several.
-- **Account for every seed.** The brief lists numbered E2E seeds (S1, S2, …). Each is a flow
-  humans already wrote down. For every seed add a `seed_coverage` entry: either the `journey`
-  id that covers it, or a `rejected` reason (not consequence-bearing, test tooling, marketing
-  site, …). Output that skips seeds is sent back to you before it is accepted.
+- **Account for every E2E stem.** The brief lists numbered seeds (S1, S2, …), each with the
+  spec/test names (stems) humans already wrote down. Every stem must end up in
+  `seed_coverage`, either under the journey that covers it (`covers`) or in `rejected` with a
+  category. A journey must plausibly be about its stems: a stem mapped to a journey that shares
+  no vocabulary with it, or whose citations fail, is sent back. `"*"` (all stems) is allowed
+  only for seeds with 3 stems or fewer. "I did not trace it" is not a rejection: trace it, or
+  add the journey with what you could verify and put the rest in `open_questions`.
+  Rejection categories: `tooling`, `test_helper`, `docs_site`, `marketing_site`, `example_app`,
+  `telemetry`, and `not_consequence_bearing` (this one needs an `evidence` citation to a file
+  you read that shows why). Submissions that leave stems unaccounted are sent back.
 
 ## Output: a single JSON object
 ```json
@@ -133,8 +139,12 @@ Not a journey: a page, a component, a utility, a settings toggle, a design-syste
     }}
   ],
   "seed_coverage": [
-    {{"seed": "S1", "journey": "snake_case_id"}},
-    {{"seed": "S2", "rejected": "why this is not a consequence-bearing journey"}}
+    {{"seed": "S1",
+      "covers": {{"snake_case_id": ["stem-a", "stem-b"], "other_journey_id": ["stem-c"]}},
+      "rejected": [{{"stems": ["stem-d"], "category": "test_helper", "reason": "shared page helpers"}},
+                  {{"stems": ["stem-e"], "category": "not_consequence_bearing",
+                   "reason": "UI preference toggle, no data effect",
+                   "evidence": {{"file": "path/in/repo.ext", "line": 10, "symbol": "toggleTheme"}}}}]}}
   ]
 }}
 ```
@@ -294,22 +304,70 @@ def corroboration(j: dict, signals: dict) -> list:
     return found
 
 
-def unaccounted(doc: dict, signals: dict | None, journey_ids=None) -> list:
-    """Seeds the model neither mapped to a (real) journey nor rejected with a reason."""
+REJECT_CATS = {"tooling", "test_helper", "docs_site", "marketing_site", "example_app",
+               "telemetry", "not_consequence_bearing"}
+
+
+def _stem_vocab(stem_name: str) -> set:
+    return {t for t in sig.norm_tokens(stem_name) if stem(t) not in GENERIC_STEMS}
+
+
+def _journey_vocab(j: dict) -> set:
+    toks = set(sig.norm_tokens(j["id"]) + sig.norm_tokens(j["name"]))
+    for s_ in j["steps"]:
+        for e in s_["evidence"]:
+            toks.update(sig.norm_tokens(e.get("file") or ""))
+    return {t for t in toks if stem(t) not in GENERIC_STEMS}
+
+
+def account(doc: dict, signals: dict | None, kept: list, root: Path, cache: dict | None = None) -> dict:
+    """Mechanical accounting of every e2e stem in the brief.
+
+    -> {"missing": [{seed, dir, stems}], "weak": [{seed, stem, journey}], "total": n, "ok": n}
+    A stem counts when it sits under a journey that survived validation AND shares
+    vocabulary with it (name or cited file paths), or is rejected with a known category
+    (`not_consequence_bearing` needs a verifiable citation). Everything else is missing.
+    The model cannot satisfy this by mapping a whole directory to one journey."""
     sds = sig.seeds(signals or {})
     if not sds:
-        return []
-    ids = {snake(j.get("id") or j.get("name") or "") for j in (doc.get("journeys") or [])
-           if isinstance(j, dict)} if journey_ids is None else set(journey_ids)
-    done = set()
-    for c in doc.get("seed_coverage") or []:
-        if not isinstance(c, dict):
-            continue
-        if snake(c.get("journey") or "") in ids and c.get("journey"):
-            done.add(str(c.get("seed")))
-        elif len(str(c.get("rejected") or "").strip()) >= 8:
-            done.add(str(c.get("seed")))
-    return [sd for sd in sds if sd["id"] not in done]
+        return {"missing": [], "weak": [], "total": 0, "ok": 0}
+    cache = cache if cache is not None else {}
+    by_id = {j["id"]: j for j in kept}
+    cov = {str(c.get("seed")): c for c in (doc.get("seed_coverage") or []) if isinstance(c, dict)}
+    missing, weak, total, ok = [], [], 0, 0
+    for sd in sds:
+        c = cov.get(sd["id"], {})
+        done, bad = set(), set()
+        for jid, stems in (c.get("covers") or {}).items() if isinstance(c.get("covers"), dict) else []:
+            j = by_id.get(snake(jid))
+            if j is None:
+                continue
+            names = sd["stems"] if stems == "*" and len(sd["stems"]) <= 3 else \
+                [x for x in (stems if isinstance(stems, list) else []) if x in sd["stems"]]
+            jv = _journey_vocab(j)
+            for st in names:
+                sv = _stem_vocab(st)
+                if not sv or any(_teq(a_, b_) for a_ in sv for b_ in jv):
+                    done.add(st)
+                else:
+                    bad.add(st)
+                    weak.append({"seed": sd["id"], "stem": st, "journey": j["id"]})
+        for r in c.get("rejected") or []:
+            if not isinstance(r, dict) or r.get("category") not in REJECT_CATS:
+                continue
+            if len(str(r.get("reason") or "").strip()) < 8:
+                continue
+            if r["category"] == "not_consequence_bearing":
+                evs = norm_evidence(r.get("evidence"))
+                if not any(check_evidence(e, root, cache)["status"] in ("verified", "file_only") for e in evs):
+                    continue
+            done.update(x for x in (r.get("stems") or []) if x in sd["stems"])
+        lacking = [x for x in sd["stems"] if x not in done]
+        total += len(sd["stems"])
+        ok += len(sd["stems"]) - len(lacking)
+        if lacking:
+            missing.append({"seed": sd["id"], "dir": sd["dir"], "stems": lacking})
+    return {"missing": missing, "weak": weak, "total": total, "ok": ok}
 
 
 def validate(doc: dict, root: Path, signals: dict | None) -> tuple:
@@ -364,8 +422,8 @@ def validate(doc: dict, root: Path, signals: dict | None) -> tuple:
         kept.append(j)
     order = {"high": 0, "medium": 1, "low": 2}
     kept.sort(key=lambda j: (order[j["confidence"]], j["model_rank"]))
-    miss = unaccounted(doc, signals, journey_ids=ids)
-    return kept, {"dropped": dropped, "unaccounted_seeds": [f"{m['id']} {m['dir']}" for m in miss], **stats}
+    acct = account(doc, signals, kept, root, cache)
+    return kept, {"dropped": dropped, "accounting": acct, **stats}
 
 
 def to_candidates(journeys: list, repo_name: str) -> dict:
@@ -444,11 +502,16 @@ def render_report(journeys: list, report: dict, repo_name: str, mode: str) -> st
             L.append(f"{k}. **{s['id']}** — {s['description']} ({cite})")
         for q in j["open_questions"]:
             L.append(f"- ❓ {q}")
-    if report.get("unaccounted_seeds"):
-        L += ["", "## E2E seeds nobody accounted for", "",
-              "These test groups were in the brief but the explorer neither mapped them to a journey "
-              "nor rejected them with a reason. Treat them as coverage gaps.", ""]
-        L += [f"- {m}" for m in report["unaccounted_seeds"]]
+    acct = report.get("accounting") or {}
+    if acct.get("total"):
+        L += ["", f"## E2E coverage: {acct['ok']} of {acct['total']} test names accounted for", ""]
+        if acct["missing"]:
+            L += ["Mapped to no surviving journey and not rejected with a valid category — "
+                  "treat as coverage gaps:", ""]
+            L += [f"- {m['seed']} `{m['dir']}`: {', '.join(m['stems'])}" for m in acct["missing"]]
+        if acct["weak"]:
+            L += ["", "Mapped to a journey that shares no vocabulary with them:", ""]
+            L += [f"- {w['seed']} `{w['stem']}` → `{w['journey']}`" for w in acct["weak"]]
     if report["dropped"]:
         L += ["", "## Dropped", ""]
         L += [f"- `{d['id']}`: {d['reason']}" for d in report["dropped"]]
@@ -598,18 +661,32 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
     gate = {"rounds": 0}
 
     def bounce(doc):
-        """-> message to send back, or None to accept."""
+        """-> message to send back, or None to accept. Judged on the VALIDATED journeys, so
+        a mapping to a journey the validator drops does not count."""
         if gate["rounds"] >= MAX_GATE_ROUNDS or not isinstance(doc, dict):
             return None
-        miss = unaccounted(doc, signals)
-        if not miss:
+        _, rep = validate(doc, root, signals)
+        acct = rep["accounting"]
+        if not acct["missing"] and not acct["weak"]:
             return None
         gate["rounds"] += 1
-        lines = "; ".join(f"{m['id']} `{m['dir']}`" for m in miss[:25])
-        log(f"  gate: {len(miss)} seed(s) unaccounted, sending back (round {gate['rounds']})")
-        return (f"Not accepted yet: {len(miss)} E2E seed(s) have no `seed_coverage` entry: {lines}. "
-                "Read the code behind them, add the journeys they represent, or reject each with a "
-                "reason, then call submit_discovery again with the complete JSON.")
+        n = sum(len(m["stems"]) for m in acct["missing"])
+        log(f"  gate: {n} stem(s) missing, {len(acct['weak'])} weak mapping(s) "
+            f"(round {gate['rounds']})")
+        parts = []
+        if acct["missing"]:
+            parts.append("Stems with no valid coverage: " + "; ".join(
+                f"{m['seed']} `{m['dir']}`: {', '.join(m['stems'][:20])}" for m in acct["missing"][:12]))
+        if acct["weak"]:
+            parts.append("Mapped to a journey that shares no vocabulary with them: " + "; ".join(
+                f"{w['seed']} {w['stem']}→{w['journey']}" for w in acct["weak"][:15]))
+        if rep["dropped"]:
+            parts.append("Journeys dropped for unverifiable citations: " + "; ".join(
+                f"{d['id']} ({d['reason']})" for d in rep["dropped"][:6]))
+        return ("Not accepted yet. " + " | ".join(parts) + ". Read the code behind them and add the "
+                "journeys they represent (with real citations), map each stem to the journey it belongs "
+                "to, or reject with a valid category (`not_consequence_bearing` needs an evidence "
+                "citation). Then call submit_discovery again with the complete JSON.")
 
     tools = RepoTools(root)
     task = build_task(root.name, brief, max_journeys, agent=True, turns=turns)

@@ -279,8 +279,11 @@ class TestAgentLoop(unittest.TestCase):
                          {"journeys": []})
 
 
-SIGNALS = {"e2e_groups": [{"dir": "e2e/billing", "files": 2, "stems": ["upgrade"]},
-                          {"dir": "e2e/storage", "files": 3, "stems": ["upload"]}]}
+SIGNALS = {"e2e_groups": [
+    {"dir": "e2e/billing", "files": 3, "stems": ["checkout", "refund-flow", "global.setup"]},
+    {"dir": "e2e/utils", "files": 1, "stems": ["clipboard"]},          # support dir: never a seed
+    {"dir": "examples/demo/e2e", "files": 1, "stems": ["demo"]},        # noise path: never a seed
+]}
 
 
 def submit(doc, cid="s"):
@@ -288,34 +291,93 @@ def submit(doc, cid="s"):
         {"id": cid, "function": {"name": "submit_discovery", "arguments": json.dumps({"discovery": doc})}}]}}]}
 
 
-class TestSeedGate(unittest.TestCase):
-    """A live run proposed 0 of 10 Supabase e2e journeys despite 27 e2e groups in its brief.
-    Submission is now refused until each seed is covered or rejected with a reason."""
+def cov(**kw):
+    return [dict({"seed": "S1"}, **kw)]
 
-    def test_unaccounted_lists_missing_seeds(self):
-        doc = {"journeys": [journey()], "seed_coverage": [{"seed": "S1", "journey": "checkout"}]}
-        self.assertEqual([m["id"] for m in ex.unaccounted(doc, SIGNALS)], ["S2"])
 
-    def test_coverage_pointing_at_a_nonexistent_journey_does_not_count(self):
-        doc = {"journeys": [journey()], "seed_coverage": [{"seed": "S1", "journey": "ghost"},
-                                                          {"seed": "S2", "rejected": "x"}]}
-        self.assertEqual([m["id"] for m in ex.unaccounted(doc, SIGNALS)], ["S1", "S2"])
+class TestStemAccounting(unittest.TestCase):
+    """Live run 2: the gate passed with 25 of 27 seeds rejected and all 32 studio tests
+    mapped to ONE journey (deploy_edge_function). Accounting is now per test name, checked
+    against the validated journeys, with enumerated rejection categories."""
 
-    def test_reasoned_rejection_counts(self):
-        doc = {"journeys": [], "seed_coverage": [
-            {"seed": "S1", "rejected": "test tooling, not a business flow"},
-            {"seed": "S2", "rejected": "marketing site checks only"}]}
-        self.assertEqual(ex.unaccounted(doc, SIGNALS), [])
+    def setUp(self):
+        self.root = make_repo(REPO)
+
+    def acct(self, doc, signals=SIGNALS):
+        return ex.validate(doc, self.root, signals)[1]["accounting"]
+
+    def test_seeds_exclude_support_dirs_noise_paths_and_setup_stems(self):
+        sds = ex.sig.seeds(SIGNALS)
+        self.assertEqual([(s["id"], s["dir"], s["stems"]) for s in sds],
+                         [("S1", "e2e/billing", ["checkout", "refund-flow"])])
+
+    def test_everything_covered_or_rejected_is_accounted(self):
+        doc = {"journeys": [journey()], "seed_coverage": cov(
+            covers={"checkout": ["checkout"]},
+            rejected=[{"stems": ["refund-flow"], "category": "test_helper", "reason": "shared page helpers"}])}
+        a = self.acct(doc)
+        self.assertEqual((a["missing"], a["weak"], a["ok"], a["total"]), ([], [], 2, 2))
+
+    def test_stem_dumped_on_an_unrelated_journey_is_weak_and_missing(self):
+        doc = {"journeys": [journey()], "seed_coverage": cov(
+            covers={"checkout": ["checkout", "refund-flow"]})}
+        a = self.acct(doc)
+        self.assertEqual(a["weak"], [{"seed": "S1", "stem": "refund-flow", "journey": "checkout"}])
+        self.assertEqual(a["missing"][0]["stems"], ["refund-flow"])
+
+    def test_star_is_only_allowed_for_small_seeds(self):
+        big = {"e2e_groups": [{"dir": "e2e/app", "files": 4, "stems": ["checkout", "a1", "a2", "a3"]}]}
+        doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": "*"})}
+        self.assertEqual(len(self.acct(doc, big)["missing"][0]["stems"]), 4)
+        small = {"e2e_groups": [{"dir": "e2e/app", "files": 1, "stems": ["checkout"]}]}
+        self.assertEqual(self.acct(doc, small)["missing"], [])
+
+    def test_unknown_category_or_thin_reason_is_not_a_rejection(self):
+        for rej in ({"category": "meh", "reason": "not important enough"},
+                    {"category": "tooling", "reason": "no"}):
+            doc = {"journeys": [journey()], "seed_coverage": cov(
+                covers={"checkout": ["checkout"]}, rejected=[dict({"stems": ["refund-flow"]}, **rej)])}
+            self.assertEqual(self.acct(doc)["missing"][0]["stems"], ["refund-flow"])
+
+    def test_not_consequence_bearing_needs_a_verifiable_citation(self):
+        rej = {"stems": ["refund-flow"], "category": "not_consequence_bearing", "reason": "a UI preference toggle"}
+        doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": ["checkout"]}, rejected=[rej])}
+        self.assertEqual(self.acct(doc)["missing"][0]["stems"], ["refund-flow"])
+        rej["evidence"] = {"file": "src/cart.ts", "line": 1, "symbol": "addToCart"}
+        self.assertEqual(self.acct(doc)["missing"], [])
+        rej["evidence"] = {"file": "src/nope.ts"}
+        self.assertEqual(self.acct(doc)["missing"][0]["stems"], ["refund-flow"])
+
+    def test_mapping_to_a_journey_the_validator_drops_does_not_count(self):
+        """MetaMask: S29 was mapped to perps_close_position, which the validator then dropped
+        for lacking two verifiable steps; the raw-submit gate still passed it."""
+        thin = journey(steps=[{"id": "a", "evidence": [{"file": "src/cart.ts", "line": 1, "symbol": "addToCart"}]},
+                              {"id": "b", "evidence": [{"file": "src/nope.ts"}]}])
+        doc = {"journeys": [thin], "seed_coverage": cov(
+            covers={"checkout": ["checkout"]},
+            rejected=[{"stems": ["refund-flow"], "category": "test_helper", "reason": "shared page helpers"}])}
+        a = self.acct(doc)
+        self.assertEqual(a["missing"][0]["stems"], ["checkout"])
 
     def test_no_e2e_signals_means_nothing_to_account_for(self):
-        self.assertEqual(ex.unaccounted({"journeys": []}, {"e2e_groups": []}), [])
+        self.assertEqual(self.acct({"journeys": []}, {"e2e_groups": []})["total"], 0)
+
+    def test_report_shows_gaps(self):
+        j, rep = ex.validate({"journeys": [journey()]}, self.root, SIGNALS)
+        out = ex.render_report(j, rep, "r", "t")
+        self.assertIn("0 of 2 test names accounted for", out)
+        self.assertIn("refund-flow", out)
+
+
+class TestSeedGate(unittest.TestCase):
+    def full(self):
+        return {"journeys": [journey()], "seed_coverage": cov(
+            covers={"checkout": ["checkout"]},
+            rejected=[{"stems": ["refund-flow"], "category": "test_helper", "reason": "shared page helpers"}])}
 
     def test_agent_bounces_incomplete_submit_then_accepts_complete_one(self):
         root = make_repo(REPO)
-        replies = [submit({"journeys": [journey()]}),
-                   submit({"journeys": [journey()], "seed_coverage": [
-                       {"seed": "S1", "journey": "checkout"},
-                       {"seed": "S2", "rejected": "not a business flow at all"}]})]
+        replies = [submit({"journeys": [journey()]}), submit(self.full())]
         seen = []
 
         def chat(msgs):
@@ -325,8 +387,8 @@ class TestSeedGate(unittest.TestCase):
         doc = ex.run_agent(root, "b", "m", "k", 5, chat=chat, log=lambda *_: None, signals=SIGNALS)
         self.assertEqual(len(seen), 2)
         self.assertEqual(seen[1]["role"], "tool")
-        self.assertIn("S1", seen[1]["content"])
-        self.assertEqual(len(doc["seed_coverage"]), 2)
+        self.assertIn("refund-flow", seen[1]["content"])
+        self.assertIn("seed_coverage", doc)
 
     def test_gate_gives_up_after_two_bounces(self):
         root = make_repo(REPO)
@@ -340,11 +402,18 @@ class TestSeedGate(unittest.TestCase):
         self.assertEqual(n["i"], 3)          # two bounces, third accepted as is
         self.assertEqual(len(doc["journeys"]), 1)
 
-    def test_unaccounted_seeds_reach_the_report(self):
+    def test_bounce_names_journeys_the_validator_dropped(self):
         root = make_repo(REPO)
-        _, report = ex.validate({"journeys": [journey()]}, root, SIGNALS)
-        self.assertEqual(len(report["unaccounted_seeds"]), 2)
-        self.assertIn("e2e/storage", "\n".join(report["unaccounted_seeds"]))
+        thin = journey(steps=[{"id": "a", "evidence": [{"file": "src/nope.ts"}]}])
+        replies = [submit({"journeys": [thin]}), submit(self.full())]
+        seen = []
+
+        def chat(msgs):
+            seen.append(msgs[-1])
+            return replies[len(seen) - 1]
+
+        ex.run_agent(root, "b", "m", "k", 5, chat=chat, log=lambda *_: None, signals=SIGNALS)
+        self.assertIn("dropped", seen[1]["content"])
 
     def test_token_usage_is_logged(self):
         root = make_repo(REPO)
