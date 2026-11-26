@@ -360,6 +360,17 @@ class TestStemAccounting(unittest.TestCase):
         self.assertEqual(a["missing"][0]["stems"], ["refund-flow"])
         self.assertIn("no vocabulary", a["bad_rejections"][0]["why"])
 
+    def test_one_citation_cannot_carry_a_bundle_of_unrelated_stems(self):
+        """Live run 6: assistant, home, connect, realtime-inspector … rejected together on a
+        citation that matched only one of them."""
+        sigs = {"e2e_groups": [{"dir": "e2e/app", "files": 3, "stems": ["checkout", "refund-flow", "realtime-inspector"]}]}
+        rej = {"stems": ["refund-flow", "realtime-inspector"], "category": "not_consequence_bearing",
+               "reason": "read-only views", "evidence": {"file": "src/refund.ts", "line": 1, "symbol": "refundOrder"}}
+        doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": ["checkout"]}, rejected=[rej])}
+        a = self.acct(doc, sigs)
+        self.assertEqual(a["missing"][0]["stems"], ["realtime-inspector"])   # refund-flow still holds
+        self.assertEqual(a["bad_rejections"][0]["stems"], ["realtime-inspector"])
+
     def test_reason_admitting_it_was_not_read_is_not_a_reason(self):
         for reason in ("AI assistant panel. I did not trace it", "I did not find the components",
                        "could not verify this flow", "untraced helper stuff"):
@@ -458,6 +469,9 @@ class TestTurnBudget(unittest.TestCase):
         out = Path(tempfile.mkdtemp())
         ex.ingest(doc, root, SIGNALS, out, "t")
         self.assertIn("Turn budget ran out", (out / "discovery-report.md").read_text())
+        doc["_accepted_at_cap"] = "tokens"
+        ex.ingest(doc, root, SIGNALS, out, "t")
+        self.assertIn("Token budget ran out", (out / "discovery-report.md").read_text())
 
 
 def reading(i, path="src/cart.ts"):

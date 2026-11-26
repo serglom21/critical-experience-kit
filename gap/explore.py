@@ -115,7 +115,8 @@ Not a journey: a page, a component, a utility, a settings toggle, a design-syste
   only for seeds with 3 stems or fewer. "I did not trace it" is not a rejection: trace it, or
   add the journey with what you could verify and put the rest in `open_questions`.
   A `not_consequence_bearing` citation must be code that relates to the stems you reject
-  (shares their vocabulary), not any file you happened to read. A journey may cover at most
+  (shares the vocabulary of EACH stem it rejects), not any file you happened to read. Reject
+  unrelated stems in separate entries, each with its own citation; `evidence` may be a list. A journey may cover at most
   {max_stems} stems: split bigger ones into more specific journeys (by asset, actor or channel).
   Rejection categories: `tooling`, `test_helper`, `docs_site`, `marketing_site`, `example_app`,
   `telemetry`, and `not_consequence_bearing` (this one needs an `evidence` citation to a file
@@ -387,11 +388,15 @@ def account(doc: dict, signals: dict | None, kept: list, root: Path, cache: dict
                 for e in good:
                     cite.update(sig.norm_tokens(e.get("file") or "") + sig.norm_tokens(e.get("symbol") or ""))
                 cite = {t for t in cite if stem(t) not in GENERIC_STEMS}
-                want = set().union(*[_stem_vocab(x) for x in rstems]) if rstems else set()
-                if want and not any(_teq(a_, b_) for a_ in want for b_ in cite):
-                    bad_rej.append({"seed": sd["id"], "stems": rstems,
-                                    "why": "citation shares no vocabulary with the rejected stems"})
-                    continue
+                # Per stem, not per bundle (live run 6: eight Supabase stems incl. realtime-inspector
+                # were rejected together on one feature-flag citation that matched only
+                # `enabled-features-overrides`). Cite once per stem group if you reject many.
+                unrelated = [x for x in rstems if _stem_vocab(x)
+                             and not any(_teq(a_, b_) for a_ in _stem_vocab(x) for b_ in cite)]
+                if unrelated:
+                    bad_rej.append({"seed": sd["id"], "stems": unrelated,
+                                    "why": "citation shares no vocabulary with these rejected stems"})
+                    rstems = [x for x in rstems if x not in unrelated]
             done.update(rstems)
         lacking = [x for x in sd["stems"] if x not in done]
         total += len(sd["stems"])
@@ -537,8 +542,10 @@ def render_report(journeys: list, report: dict, repo_name: str, mode: str) -> st
         for q in j["open_questions"]:
             L.append(f"- ❓ {q}")
     if report.get("accepted_at_cap"):
-        L += ["", "> **Turn budget ran out.** The final submission was taken without the coverage "
-                  "check. Re-run with a larger `--turns` before trusting the gaps below.", ""]
+        which, flag = (("Token", "--max-input-tokens") if report["accepted_at_cap"] == "tokens"
+                       else ("Turn", "--turns"))
+        L += ["", f"> **{which} budget ran out.** The final submission was taken without the coverage "
+                  f"check. Re-run with a larger `{flag}` before trusting the gaps below.", ""]
     acct = report.get("accounting") or {}
     if acct.get("total"):
         L += ["", f"## E2E coverage: {acct['ok']} of {acct['total']} test names accounted for", ""]
@@ -904,11 +911,11 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
         if c["function"]["name"] == "submit_discovery":
             try:
                 doc = json.loads(c["function"]["arguments"]).get("discovery") or {"journeys": []}
-                doc["_accepted_at_cap"] = True   # this submit was not gated
+                doc["_accepted_at_cap"] = "tokens" if gate["warned_tokens"] else "turns"
                 return done(doc)
             except (ValueError, AttributeError):
                 pass
-    return done({"journeys": [], "_accepted_at_cap": True})
+    return done({"journeys": [], "_accepted_at_cap": "tokens" if gate["warned_tokens"] else "turns"})
 
 
 def build_task(repo_name: str, brief: str, max_journeys: int, agent: bool = False,
@@ -923,7 +930,7 @@ def build_task(repo_name: str, brief: str, max_journeys: int, agent: bool = Fals
 
 def ingest(discovery: dict, root: Path, signals: dict | None, out: Path, mode: str) -> int:
     journeys, report = validate(discovery, root, signals)
-    report["accepted_at_cap"] = bool(discovery.get("_accepted_at_cap"))
+    report["accepted_at_cap"] = discovery.get("_accepted_at_cap") or False
     out.mkdir(parents=True, exist_ok=True)
     (out / "discovery.validated.json").write_text(json.dumps({"journeys": journeys, "report": report}, indent=2))
     (out / "journeys.yaml").write_text(yaml.safe_dump(to_candidates(journeys, root.name), sort_keys=False, width=100))

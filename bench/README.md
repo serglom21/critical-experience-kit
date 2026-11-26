@@ -127,3 +127,16 @@ retried; every submission is checkpointed to `discovery.partial.json`; an input-
 (`--max-input-tokens`, default 3M) asks for a submit at 80%; the model is told when 12 turns
 remain so a gated submit still fits; superseded submissions are elided from history.
 Not yet measured live.
+
+## Live run 6 (token ceiling) — stopping point for tuning on these two repos
+
+| Repo | Recall | Precision | Proposals | Wall | Tokens in (cached) | Cost |
+|---|---|---|---|---|---|---|
+| supabase | 0.929 | 0.867 | 15 | 215 s | 0.68 M (0.20 M) | $0.955 |
+| metamask | 1.000 | 0.912 | 34 | 1,061 s | 2.91 M (0.88 M) | $6.144 |
+
+The 3M-token ceiling halved MetaMask's cost with recall held at 1.0. Last fix from this run: a
+`not_consequence_bearing` citation must relate to each rejected stem, not just one of them
+(Supabase's realtime miss came from an 8-stem bundle rejected on a feature-flag citation).
+Further tuning against supabase/metamask would overfit them; the next measurement should be
+a blind benchmark on repos and labels that never informed the gate.
