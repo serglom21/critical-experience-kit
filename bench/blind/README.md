@@ -26,5 +26,12 @@ mechanism works, not that it generalises. This benchmark measures generalisation
 | killbill/killbill | Java | Prospect | No UI: tests discovery with almost no e2e seeds |
 | cli/cli | Go | Microsoft - GitHub, $25k+ | Optional, CLI-shaped |
 
+## Known issues, recorded before any run (not fixed, per the freeze)
+- `gap/signals.py` E2E_DIR does not match `e2e-tests/` or a bare `integration/` segment, so
+  fx-private-relay (`e2e-tests/`) and killbill (`beatrix/.../integration/`) get 0 e2e seeds
+  and the coverage gate never fires on them. Found from directory listings during setup, not
+  from any score. Those two runs measure discovery when a repo's test naming is not recognised.
+  Fix after scoring; verify on a fresh repo.
+
 ## Results
 (fill in after runs)
