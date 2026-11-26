@@ -276,8 +276,9 @@ class TestAgentLoop(unittest.TestCase):
             return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
                 {"id": str(n["i"]), "function": {"name": "list_dir", "arguments": "{}"}}]}}]}
 
-        self.assertEqual(ex.run_agent(root, "b", "m", "k", 5, chat=chat, turns=3, log=lambda *_: None),
-                         {"journeys": []})
+        doc = ex.run_agent(root, "b", "m", "k", 5, chat=chat, turns=3, log=lambda *_: None)
+        self.assertEqual(doc["journeys"], [])
+        self.assertTrue(doc["_accepted_at_cap"])
 
 
 SIGNALS = {"e2e_groups": [
@@ -401,6 +402,62 @@ class TestStemAccounting(unittest.TestCase):
         out = ex.render_report(j, rep, "r", "t")
         self.assertIn("0 of 2 test names accounted for", out)
         self.assertIn("refund-flow", out)
+
+
+class TestTurnBudget(unittest.TestCase):
+    """Live run 4: MetaMask used its 45 turns, the model was told 'out of budget', and that
+    submit (with 53 test names unaccounted for, incl. buy-ramps) skipped the gate."""
+
+    def test_auto_turns_scale_with_stems_and_are_capped(self):
+        small = {"e2e_groups": [{"dir": "e2e/a", "files": 1, "stems": ["checkout"]}]}
+        big = {"e2e_groups": [{"dir": f"e2e/g{i}", "files": 40, "stems": [f"s{i}-{k}" for k in range(40)]}
+                              for i in range(60)]}
+        self.assertEqual(ex.auto_turns({"e2e_groups": []}), ex.MAX_TURNS)
+        self.assertEqual(ex.auto_turns(small), ex.MAX_TURNS)
+        self.assertGreater(ex.auto_turns({"e2e_groups": big["e2e_groups"][:10]}), ex.MAX_TURNS)
+        self.assertEqual(ex.auto_turns(big), 120)
+
+    def test_a_bounce_buys_extra_turns(self):
+        root = make_repo(REPO)
+        n = {"i": 0}
+
+        def chat(msgs):
+            n["i"] += 1
+            if n["i"] <= 2:   # two reads exhaust turns=2, then the model submits incompletely
+                return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+                    {"id": str(n["i"]), "function": {"name": "read_file",
+                                                     "arguments": json.dumps({"path": "src/cart.ts"})}}]}}]}
+            if n["i"] == 3:
+                return submit({"journeys": [journey()]}, cid="x")
+            if n["i"] == 4:   # after the bounce the model must still be allowed to keep working
+                return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+                    {"id": "r", "function": {"name": "read_file",
+                                             "arguments": json.dumps({"path": "src/pay.ts"})}}]}}]}
+            return submit({"journeys": [journey()], "seed_coverage": cov(
+                covers={"checkout": ["checkout"]},
+                rejected=[{"stems": ["refund-flow"], "category": "test_helper",
+                           "reason": "shared page helpers"}])}, cid="y")
+
+        doc = ex.run_agent(root, "b", "m", "k", 5, chat=chat, turns=3, log=lambda *_: None, signals=SIGNALS)
+        self.assertNotIn("_accepted_at_cap", doc)   # finished inside the extended budget
+        self.assertIn("seed_coverage", doc)
+
+    def test_cap_submit_is_marked_and_reported(self):
+        root = make_repo(REPO)
+        n = {"i": 0}
+
+        def chat(msgs):
+            n["i"] += 1
+            if msgs[-1]["role"] == "user" and "Out of budget" in msgs[-1]["content"]:
+                return submit({"journeys": [journey()]}, cid="z")
+            return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+                {"id": str(n["i"]), "function": {"name": "list_dir", "arguments": "{}"}}]}}]}
+
+        doc = ex.run_agent(root, "b", "m", "k", 5, chat=chat, turns=2, log=lambda *_: None)
+        self.assertTrue(doc["_accepted_at_cap"])
+        out = Path(tempfile.mkdtemp())
+        ex.ingest(doc, root, SIGNALS, out, "t")
+        self.assertIn("Turn budget ran out", (out / "discovery-report.md").read_text())
 
 
 class TestCostControl(unittest.TestCase):

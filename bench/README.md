@@ -97,3 +97,18 @@ with the rejected stems, reasons that admit the code was not read do not count, 
 15 stems are bounced as overloaded, old tool results are elided from the conversation (keep 10,
 batch of 6), and the static prompt prefix is marked cacheable for `anthropic/*` models.
 Not yet measured live; caching in particular is untested against OpenRouter.
+
+## Live run 4 (gate v3) and the follow-up
+
+| Repo | Recall | Precision | Proposals | Wall | Tokens in (cached) | Cost |
+|---|---|---|---|---|---|---|
+| supabase | 0.929 | 0.867 | 15 | 211 s | 0.56 M (0.17 M) | $0.720 |
+| metamask | 0.923 | 0.900 | 30 | 904 s | 1.52 M (0.56 M) | $3.668 |
+
+Elision and prefix caching cut cost 58% and 43% with recall held. MetaMask hit the 45-turn cap
+after its first bounce; that last submit skipped the gate, leaving 53 of 392 test names
+unaccounted for (including the buy-ramps deep link, whose rejection the gate had already
+flagged). Follow-up: turn budget scales with the number of test names (45 + stems/8, max 120),
+each bounce adds 10 turns, and a cap submit is marked in the report. Not yet measured live.
+Remaining misses are judgment calls the gate cannot settle (Supabase realtime inspector was
+rejected as read-only with a related citation).

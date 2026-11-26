@@ -39,6 +39,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import os
 import re
@@ -534,6 +535,9 @@ def render_report(journeys: list, report: dict, repo_name: str, mode: str) -> st
             L.append(f"{k}. **{s['id']}** — {s['description']} ({cite})")
         for q in j["open_questions"]:
             L.append(f"- ❓ {q}")
+    if report.get("accepted_at_cap"):
+        L += ["", "> **Turn budget ran out.** The final submission was taken without the coverage "
+                  "check. Re-run with a larger `--turns` before trusting the gaps below.", ""]
     acct = report.get("accounting") or {}
     if acct.get("total"):
         L += ["", f"## E2E coverage: {acct['ok']} of {acct['total']} test names accounted for", ""]
@@ -685,6 +689,16 @@ def chat_openrouter(messages: list, model: str, key: str, tools: list) -> dict:
 
 
 MAX_GATE_ROUNDS = 2
+BOUNCE_EXTRA_TURNS = 10  # a bounce is worthless if the model has no turns left to act on it
+
+
+def auto_turns(signals: dict | None) -> int:
+    """Turn budget that scales with what must be accounted for (live run 4: 392 test names
+    on a 45-turn budget ended at the cap with 53 of them unaccounted for)."""
+    stems = sum(len(sd["stems"]) for sd in sig.seeds(signals or {}))
+    return min(120, MAX_TURNS + stems // 8)
+
+
 KEEP_FULL_RESULTS = 10   # most recent tool results kept verbatim
 ELIDE_BATCH = 6          # elide in batches so the history prefix stays stable between batches
 
@@ -733,7 +747,7 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             + (f" ({usage['cached']} cached)" if usage.get("cached") else ""))
         return doc
 
-    gate = {"rounds": 0}
+    gate = {"rounds": 0, "extra": 0}
     labels: dict = {}
 
     def bounce(doc):
@@ -746,6 +760,7 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
         if not (acct["missing"] or acct["weak"] or acct["bad_rejections"] or acct["overloaded"]):
             return None
         gate["rounds"] += 1
+        gate["extra"] += BOUNCE_EXTRA_TURNS
         n = sum(len(m["stems"]) for m in acct["missing"])
         log(f"  gate: {n} stem(s) missing, {len(acct['weak'])} weak mapping(s), "
             f"{len(acct['bad_rejections'])} bad rejection(s), {len(acct['overloaded'])} overloaded journey(s) "
@@ -778,7 +793,9 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
                                       "and symbols you have read. You never write or modify code."},
         {"role": "user", "content": task},
     ]
-    for turn in range(turns):
+    for turn in itertools.count():
+        if turn >= turns + gate["extra"]:
+            break
         elide_old_results(messages, labels)
         resp = chat(messages)
         msg = (resp.get("choices") or [{}])[0].get("message") or {}
@@ -830,10 +847,12 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
     for c in ((resp.get("choices") or [{}])[0].get("message") or {}).get("tool_calls") or []:
         if c["function"]["name"] == "submit_discovery":
             try:
-                return done(json.loads(c["function"]["arguments"]).get("discovery") or {"journeys": []})
-            except ValueError:
+                doc = json.loads(c["function"]["arguments"]).get("discovery") or {"journeys": []}
+                doc["_accepted_at_cap"] = True   # this submit was not gated
+                return done(doc)
+            except (ValueError, AttributeError):
                 pass
-    return done({"journeys": []})
+    return done({"journeys": [], "_accepted_at_cap": True})
 
 
 def build_task(repo_name: str, brief: str, max_journeys: int, agent: bool = False,
@@ -848,6 +867,7 @@ def build_task(repo_name: str, brief: str, max_journeys: int, agent: bool = Fals
 
 def ingest(discovery: dict, root: Path, signals: dict | None, out: Path, mode: str) -> int:
     journeys, report = validate(discovery, root, signals)
+    report["accepted_at_cap"] = bool(discovery.get("_accepted_at_cap"))
     out.mkdir(parents=True, exist_ok=True)
     (out / "discovery.validated.json").write_text(json.dumps({"journeys": journeys, "report": report}, indent=2))
     (out / "journeys.yaml").write_text(yaml.safe_dump(to_candidates(journeys, root.name), sort_keys=False, width=100))
@@ -871,7 +891,8 @@ def main(argv=None) -> int:
                     help="validate a discovery.json and write journeys.yaml")
     ap.add_argument("--model", default=os.environ.get("CE_EXPLORER_MODEL", DEFAULT_MODEL))
     ap.add_argument("--max-journeys", type=int, default=30)
-    ap.add_argument("--turns", type=int, default=MAX_TURNS)
+    ap.add_argument("--turns", type=int, default=0,
+                    help="tool-turn budget; 0 = scale with the number of e2e test names (45 + stems/8)")
     args = ap.parse_args(argv)
 
     root = Path(args.repo).resolve()
@@ -906,7 +927,8 @@ def main(argv=None) -> int:
         print("error: set OPENROUTER_API_KEY, or use --mode task to hand the task to your own agent.",
               file=sys.stderr)
         return 2
-    print(f"exploring {root.name} with {args.model} …")
+    args.turns = args.turns or auto_turns(signals)
+    print(f"exploring {root.name} with {args.model}, {args.turns} turns …")
     try:
         doc = run_agent(root, brief, args.model, key, args.max_journeys, turns=args.turns,
                         signals=signals)
