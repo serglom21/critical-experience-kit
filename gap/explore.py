@@ -39,6 +39,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import http.client
 import itertools
 import json
 import os
@@ -682,14 +683,17 @@ def chat_openrouter(messages: list, model: str, key: str, tools: list) -> dict:
                 last = e
                 continue
             raise RuntimeError(_http_error_hint(e.code, body))
-        except urllib.error.URLError as e:
+        except (urllib.error.URLError, http.client.HTTPException, ConnectionError, TimeoutError) as e:
+            # Live run 5: ConnectionResetError mid-response killed a $4.87 run unretried.
             last = e
-            time.sleep(2)
-    raise RuntimeError(f"could not reach OpenRouter: {last}")
+            time.sleep(2 ** attempt * 2)
+    raise RuntimeError(f"could not reach OpenRouter after 3 attempts: {last}")
 
 
 MAX_GATE_ROUNDS = 2
-BOUNCE_EXTRA_TURNS = 10  # a bounce is worthless if the model has no turns left to act on it
+BOUNCE_EXTRA_TURNS = 10
+WARN_TURNS_LEFT = 12            # tell the model to submit while a gate round still fits
+MAX_INPUT_TOKENS = 3_000_000    # live run 5: 5.6M input tokens / $11.62 on MetaMask  # a bounce is worthless if the model has no turns left to act on it
 
 
 def auto_turns(signals: dict | None) -> int:
@@ -701,6 +705,24 @@ def auto_turns(signals: dict | None) -> int:
 
 KEEP_FULL_RESULTS = 10   # most recent tool results kept verbatim
 ELIDE_BATCH = 6          # elide in batches so the history prefix stays stable between batches
+
+
+def elide_superseded_submits(messages: list) -> int:
+    """Keep only the latest submit_discovery payload in history. Each MetaMask submission
+    carries ~400 stem mappings and was resent with every later request."""
+    idx = [i for i, m in enumerate(messages) if m.get("role") == "assistant"
+           and any(c.get("function", {}).get("name") == "submit_discovery" for c in m.get("tool_calls") or [])]
+    n = 0
+    for i in idx[:-1]:
+        calls = []
+        for c in messages[i]["tool_calls"]:
+            if c["function"]["name"] == "submit_discovery" and "superseded" not in c["function"].get("arguments", ""):
+                c = dict(c, function=dict(c["function"], arguments=json.dumps(
+                    {"discovery": {"note": "superseded by a later submission"}})))
+                n += 1
+            calls.append(c)
+        messages[i] = dict(messages[i], tool_calls=calls)
+    return n
 
 
 def elide_old_results(messages: list, labels: dict) -> int:
@@ -722,7 +744,8 @@ def elide_old_results(messages: list, labels: dict) -> int:
 
 
 def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys: int,
-              chat=None, turns: int = MAX_TURNS, log=print, signals: dict | None = None) -> dict:
+              chat=None, turns: int = MAX_TURNS, log=print, signals: dict | None = None,
+              max_input_tokens: int = MAX_INPUT_TOKENS, checkpoint: Path | None = None) -> dict:
     """Tool loop. `chat` is injectable so the loop is testable offline.
 
     A submission is accepted only when every E2E seed in the brief is accounted for
@@ -747,7 +770,31 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             + (f" ({usage['cached']} cached)" if usage.get("cached") else ""))
         return doc
 
-    gate = {"rounds": 0, "extra": 0}
+    gate = {"rounds": 0, "extra": 0, "limit": None, "warned_turns": None, "warned_tokens": False}
+
+    def save(doc):
+        if checkpoint and isinstance(doc, dict):
+            try:
+                checkpoint.write_text(json.dumps(doc, indent=2))
+            except OSError:
+                pass
+
+    def nudge(turn):
+        """Stop the model from spending everything before a gated submit. Returns a message
+        to append, or None. Shrinks the limit when the token budget is nearly spent."""
+        limit = gate["limit"] if gate["limit"] is not None else turns + gate["extra"]
+        if not gate["warned_tokens"] and usage["prompt_tokens"] >= 0.8 * max_input_tokens:
+            gate["warned_tokens"] = True
+            gate["limit"] = min(limit, turn + 6)
+            log(f"  budget: {usage['prompt_tokens']} input tokens used, asking for submit")
+            return ("Token budget nearly spent. Call submit_discovery within 5 turns with the complete "
+                    "JSON, including seed_coverage for every stem.")
+        left = limit - turn
+        if left == WARN_TURNS_LEFT and gate["warned_turns"] != limit:
+            gate["warned_turns"] = limit
+            return (f"{left} turns left. Finish the journeys you are tracing and call submit_discovery "
+                    "soon so the coverage check can still send it back to you.")
+        return None
     labels: dict = {}
 
     def bounce(doc):
@@ -761,6 +808,8 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             return None
         gate["rounds"] += 1
         gate["extra"] += BOUNCE_EXTRA_TURNS
+        if gate["limit"] is not None and not gate["warned_tokens"]:
+            gate["limit"] += BOUNCE_EXTRA_TURNS
         n = sum(len(m["stems"]) for m in acct["missing"])
         log(f"  gate: {n} stem(s) missing, {len(acct['weak'])} weak mapping(s), "
             f"{len(acct['bad_rejections'])} bad rejection(s), {len(acct['overloaded'])} overloaded journey(s) "
@@ -794,9 +843,13 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
         {"role": "user", "content": task},
     ]
     for turn in itertools.count():
-        if turn >= turns + gate["extra"]:
+        if turn >= (gate["limit"] if gate["limit"] is not None else turns + gate["extra"]):
             break
+        note = nudge(turn)
+        if note:
+            messages.append({"role": "user", "content": note})
         elide_old_results(messages, labels)
+        elide_superseded_submits(messages)
         resp = chat(messages)
         msg = (resp.get("choices") or [{}])[0].get("message") or {}
         messages.append({k: v for k, v in msg.items() if k in ("role", "content", "tool_calls")} or
@@ -807,6 +860,7 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             if m:
                 try:
                     doc = json.loads(m.group(0))
+                    save(doc)
                     back = bounce(doc)
                     if back is None:
                         return done(doc)
@@ -826,6 +880,7 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             if fn == "submit_discovery":
                 d = args.get("discovery")
                 doc = d if isinstance(d, dict) else {"journeys": []}
+                save(doc)
                 back = bounce(doc)
                 if back is None:
                     return done(doc)
@@ -842,6 +897,7 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             log(f"  [{turn + 1}] {fn} {json.dumps(args)[:90]}")
             labels[c.get("id", fn)] = f"{fn} {json.dumps(args)[:70]}"
             messages.append({"role": "tool", "tool_call_id": c.get("id", fn), "content": out[:MAX_TOOL_CHARS]})
+    elide_superseded_submits(messages)
     messages.append({"role": "user", "content": "Out of budget. Call submit_discovery now with what you have."})
     resp = chat(messages)
     for c in ((resp.get("choices") or [{}])[0].get("message") or {}).get("tool_calls") or []:
@@ -891,6 +947,8 @@ def main(argv=None) -> int:
                     help="validate a discovery.json and write journeys.yaml")
     ap.add_argument("--model", default=os.environ.get("CE_EXPLORER_MODEL", DEFAULT_MODEL))
     ap.add_argument("--max-journeys", type=int, default=30)
+    ap.add_argument("--max-input-tokens", type=int, default=MAX_INPUT_TOKENS,
+                    help="input-token ceiling for the run (cost control); model is asked to submit at 80%%")
     ap.add_argument("--turns", type=int, default=0,
                     help="tool-turn budget; 0 = scale with the number of e2e test names (45 + stems/8)")
     args = ap.parse_args(argv)
@@ -931,9 +989,14 @@ def main(argv=None) -> int:
     print(f"exploring {root.name} with {args.model}, {args.turns} turns …")
     try:
         doc = run_agent(root, brief, args.model, key, args.max_journeys, turns=args.turns,
-                        signals=signals)
+                        signals=signals, max_input_tokens=args.max_input_tokens,
+                        checkpoint=out / "discovery.partial.json")
     except RuntimeError as e:
         print(f"error: {e}", file=sys.stderr)
+        part = out / "discovery.partial.json"
+        if part.exists():
+            print(f"the last submission was saved; validate it with:\n"
+                  f"  ce explore --repo {args.repo} --ingest {part} --out {out}", file=sys.stderr)
         return 2
     (out / "discovery.json").write_text(json.dumps(doc, indent=2))
     return ingest(doc, root, signals, out, f"openrouter · {args.model}")

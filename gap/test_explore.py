@@ -460,6 +460,95 @@ class TestTurnBudget(unittest.TestCase):
         self.assertIn("Turn budget ran out", (out / "discovery-report.md").read_text())
 
 
+def reading(i, path="src/cart.ts"):
+    return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+        {"id": str(i), "function": {"name": "read_file", "arguments": json.dumps({"path": path})}}]}}]}
+
+
+class TestRun5Fixes(unittest.TestCase):
+    def test_connection_reset_is_retried(self):
+        """Live run 5: ConnectionResetError mid-response killed a $4.87 MetaMask run."""
+        import io
+        from unittest import mock
+        calls = {"n": 0}
+
+        class Resp(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def urlopen(req, timeout=0):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise ConnectionResetError(54, "Connection reset by peer")
+            return Resp(b'{"choices": []}')
+
+        with mock.patch.object(ex.urllib.request, "urlopen", urlopen), mock.patch.object(ex.time, "sleep"):
+            self.assertEqual(ex.chat_openrouter([], "m", "k", []), {"choices": []})
+        self.assertEqual(calls["n"], 2)
+
+    def test_token_ceiling_asks_for_submit_and_stops_early(self):
+        """Live run 5: the bigger turn budget took MetaMask to 5.6M input tokens / $11.62."""
+        root = make_repo(REPO)
+        seen = {"n": 0, "warned": False}
+
+        def chat(msgs):
+            seen["n"] += 1
+            if any("Token budget nearly spent" in str(m.get("content")) for m in msgs):
+                seen["warned"] = True
+            r = reading(seen["n"])
+            r["usage"] = {"prompt_tokens": 1000, "completion_tokens": 1}
+            return r
+
+        doc = ex.run_agent(root, "b", "m", "k", 5, chat=chat, turns=100, log=lambda *_: None,
+                           max_input_tokens=5000)
+        self.assertTrue(seen["warned"])
+        self.assertLess(seen["n"], 15)          # stopped near the ceiling, not at turn 100
+        self.assertTrue(doc["_accepted_at_cap"])
+
+    def test_turns_left_warning_is_sent_before_the_cap(self):
+        root = make_repo(REPO)
+        warned_at = []
+
+        def chat(msgs):
+            if "turns left" in str(msgs[-1].get("content")) and msgs[-1]["role"] == "user":
+                warned_at.append(len(msgs))
+            return reading(len(msgs))
+
+        ex.run_agent(root, "b", "m", "k", 5, chat=chat, turns=20, log=lambda *_: None)
+        self.assertEqual(len(warned_at), 1)
+
+    def test_only_the_latest_submission_stays_in_history(self):
+        msgs = [{"role": "user", "content": "t"}]
+        for i in range(3):
+            msgs.append({"role": "assistant", "content": "", "tool_calls": [
+                {"id": f"s{i}", "function": {"name": "submit_discovery",
+                                             "arguments": json.dumps({"discovery": {"journeys": ["x" * 500]}})}}]})
+            msgs.append({"role": "tool", "tool_call_id": f"s{i}", "content": "Not accepted yet"})
+        self.assertEqual(ex.elide_superseded_submits(msgs), 2)
+        args = [m["tool_calls"][0]["function"]["arguments"] for m in msgs if m["role"] == "assistant"]
+        self.assertIn("superseded", args[0])
+        self.assertIn("superseded", args[1])
+        self.assertIn("xxxx", args[2])
+        self.assertEqual(ex.elide_superseded_submits(msgs), 0)
+
+    def test_every_submit_is_checkpointed(self):
+        root = make_repo(REPO)
+        cp = Path(tempfile.mkdtemp()) / "discovery.partial.json"
+        replies = [submit({"journeys": [journey()]}), submit({"journeys": [journey(), journey("pay", "Pay")]})]
+        n = {"i": 0}
+
+        def chat(msgs):
+            n["i"] += 1
+            if n["i"] == 2:
+                self.assertEqual(len(json.loads(cp.read_text())["journeys"]), 1)
+                raise RuntimeError("connection lost")
+            return replies[0]
+
+        with self.assertRaises(RuntimeError):
+            ex.run_agent(root, "b", "m", "k", 5, chat=chat, log=lambda *_: None, signals=SIGNALS, checkpoint=cp)
+        self.assertTrue(cp.exists())
+
+
 class TestCostControl(unittest.TestCase):
     def test_old_tool_results_are_elided_but_stay_paired(self):
         msgs, labels = [{"role": "system", "content": "s"}, {"role": "user", "content": "task"}], {}

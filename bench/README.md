@@ -112,3 +112,18 @@ flagged). Follow-up: turn budget scales with the number of test names (45 + stem
 each bounce adds 10 turns, and a cap submit is marked in the report. Not yet measured live.
 Remaining misses are judgment calls the gate cannot settle (Supabase realtime inspector was
 rejected as read-only with a related citation).
+
+## Live run 5 (auto turn budget) and the follow-up
+
+| Repo | Recall | Precision | Proposals | Turns (budget) | Wall | Tokens in (cached) | Cost |
+|---|---|---|---|---|---|---|---|
+| supabase | 0.929 | 0.800 | 20 | 31 (48) | 301 s | 0.95 M (0.24 M) | $1.456 |
+| metamask | 1.000 | 0.968 | 31 | 103 (94+10) | 1,752 s | 5.61 M (1.31 M) | $11.622 |
+
+Best recall so far (MetaMask found ramps-buy), but the larger budget was spent in full: 303
+greps, the cap hit again, cost tripled. A first MetaMask attempt died on an unretried
+ConnectionResetError after $4.87 with nothing saved. Follow-up: connection errors are
+retried; every submission is checkpointed to `discovery.partial.json`; an input-token ceiling
+(`--max-input-tokens`, default 3M) asks for a submit at 80%; the model is told when 12 turns
+remain so a gated submit still fits; superseded submissions are elided from history.
+Not yet measured live.
