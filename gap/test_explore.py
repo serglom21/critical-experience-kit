@@ -45,6 +45,7 @@ def journey(jid="checkout", name="Checkout", steps=None, **kw):
 REPO = {
     "src/cart.ts": "export function addToCart() {}\n",
     "src/pay.ts": "export function chargeCard() {}\n",
+    "src/refund.ts": "export function refundOrder() {}\n",
     ".env": "SECRET=1\n",
     "src/__mocks__/pay.ts": "export function chargeCard() {}\n",
 }
@@ -343,10 +344,43 @@ class TestStemAccounting(unittest.TestCase):
         rej = {"stems": ["refund-flow"], "category": "not_consequence_bearing", "reason": "a UI preference toggle"}
         doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": ["checkout"]}, rejected=[rej])}
         self.assertEqual(self.acct(doc)["missing"][0]["stems"], ["refund-flow"])
-        rej["evidence"] = {"file": "src/cart.ts", "line": 1, "symbol": "addToCart"}
+        rej["evidence"] = {"file": "src/refund.ts", "line": 1, "symbol": "refundOrder"}
         self.assertEqual(self.acct(doc)["missing"], [])
         rej["evidence"] = {"file": "src/nope.ts"}
         self.assertEqual(self.acct(doc)["missing"][0]["stems"], ["refund-flow"])
+
+    def test_citation_unrelated_to_the_rejected_stems_does_not_hold(self):
+        """Live run 3: `assistant` and `filter-bar` were rejected 'not consequence-bearing'
+        with a citation to SQLEditor.tsx, a file that exists and has nothing to do with them."""
+        rej = {"stems": ["refund-flow"], "category": "not_consequence_bearing", "reason": "a UI preference toggle",
+               "evidence": {"file": "src/cart.ts", "line": 1, "symbol": "addToCart"}}
+        doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": ["checkout"]}, rejected=[rej])}
+        a = self.acct(doc)
+        self.assertEqual(a["missing"][0]["stems"], ["refund-flow"])
+        self.assertIn("no vocabulary", a["bad_rejections"][0]["why"])
+
+    def test_reason_admitting_it_was_not_read_is_not_a_reason(self):
+        for reason in ("AI assistant panel. I did not trace it", "I did not find the components",
+                       "could not verify this flow", "untraced helper stuff"):
+            rej = {"stems": ["refund-flow"], "category": "tooling", "reason": reason}
+            doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": ["checkout"]}, rejected=[rej])}
+            a = self.acct(doc)
+            self.assertEqual(a["missing"][0]["stems"], ["refund-flow"], reason)
+            self.assertTrue(a["bad_rejections"], reason)
+
+    def test_ordinary_negation_in_a_reason_is_fine(self):
+        rej = {"stems": ["refund-flow"], "category": "tooling", "reason": "not a product flow, shared test harness"}
+        doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": ["checkout"]}, rejected=[rej])}
+        self.assertEqual(self.acct(doc)["missing"], [])
+
+    def test_journey_over_the_stem_cap_is_flagged_overloaded(self):
+        """MetaMask: send_funds held 41 stems, including Ledger and NFT sends."""
+        stems = [f"checkout-{i}" for i in range(ex.MAX_STEMS_PER_JOURNEY + 3)]
+        sigs = {"e2e_groups": [{"dir": "e2e/pay", "files": len(stems), "stems": stems}]}
+        doc = {"journeys": [journey()], "seed_coverage": cov(covers={"checkout": stems})}
+        a = self.acct(doc, sigs)
+        self.assertEqual(a["missing"], [])
+        self.assertEqual(a["overloaded"], [{"journey": "checkout", "stems": len(stems)}])
 
     def test_mapping_to_a_journey_the_validator_drops_does_not_count(self):
         """MetaMask: S29 was mapped to perps_close_position, which the validator then dropped
@@ -367,6 +401,57 @@ class TestStemAccounting(unittest.TestCase):
         out = ex.render_report(j, rep, "r", "t")
         self.assertIn("0 of 2 test names accounted for", out)
         self.assertIn("refund-flow", out)
+
+
+class TestCostControl(unittest.TestCase):
+    def test_old_tool_results_are_elided_but_stay_paired(self):
+        msgs, labels = [{"role": "system", "content": "s"}, {"role": "user", "content": "task"}], {}
+        for i in range(30):
+            msgs.append({"role": "assistant", "content": "", "tool_calls": [{"id": str(i)}]})
+            msgs.append({"role": "tool", "tool_call_id": str(i), "content": "x" * 5000})
+            labels[str(i)] = f"read_file f{i}.ts"
+        n = ex.elide_old_results(msgs, labels)
+        tools = [m for m in msgs if m["role"] == "tool"]
+        self.assertEqual(n, 20)
+        self.assertEqual(len(tools), 30)  # nothing removed: tool_call ids still pair up
+        self.assertTrue(all(t["content"].startswith("[elided: read_file") for t in tools[:20]))
+        self.assertTrue(all(len(t["content"]) == 5000 for t in tools[20:]))
+        self.assertEqual(ex.elide_old_results(msgs, labels), 0)  # idempotent
+
+    def test_few_results_are_left_alone(self):
+        msgs = [{"role": "tool", "tool_call_id": "a", "content": "y" * 100}] * 5
+        self.assertEqual(ex.elide_old_results(msgs, {"a": "grep"}), 0)
+
+    def test_gate_message_is_never_elided(self):
+        msgs = [{"role": "tool", "tool_call_id": "gate", "content": "Not accepted yet"}] * 40
+        self.assertEqual(ex.elide_old_results(msgs, {}), 0)
+
+    def test_request_size_grows_sublinearly_with_turns(self):
+        """The quadratic input-token growth behind $6.39 on MetaMask: with elision, total
+        characters sent over a 40-turn run stay far below the unelided sum."""
+        root = make_repo(REPO)
+        sent = []
+        n = {"i": 0}
+
+        def chat(msgs):
+            sent.append(sum(len(str(m.get("content"))) for m in msgs))
+            n["i"] += 1
+            if n["i"] > 40:
+                return {"choices": [{"message": {"role": "assistant", "content": '{"journeys": []}'}}]}
+            return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+                {"id": str(n["i"]), "function": {"name": "read_file",
+                                                 "arguments": json.dumps({"path": "src/cart.ts"})}}]}}]}
+
+        ex.run_agent(root, "b", "m", "k", 5, chat=chat, turns=50, log=lambda *_: None)
+        self.assertLess(sent[-1], sent[17] * 1.8)  # flat after the window fills, not linear
+
+    def test_anthropic_models_get_a_cacheable_prefix_others_do_not(self):
+        msgs = [{"role": "system", "content": "s"}, {"role": "user", "content": "task"},
+                {"role": "assistant", "content": "a"}]
+        out = ex.prepare_messages(msgs, "anthropic/claude-sonnet-5.5")
+        self.assertEqual(out[1]["content"][0]["cache_control"], {"type": "ephemeral"})
+        self.assertEqual(msgs[1]["content"], "task")  # input untouched
+        self.assertIs(ex.prepare_messages(msgs, "openai/gpt-x"), msgs)
 
 
 class TestSeedGate(unittest.TestCase):

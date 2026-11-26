@@ -112,6 +112,9 @@ Not a journey: a page, a component, a utility, a settings toggle, a design-syste
   no vocabulary with it, or whose citations fail, is sent back. `"*"` (all stems) is allowed
   only for seeds with 3 stems or fewer. "I did not trace it" is not a rejection: trace it, or
   add the journey with what you could verify and put the rest in `open_questions`.
+  A `not_consequence_bearing` citation must be code that relates to the stems you reject
+  (shares their vocabulary), not any file you happened to read. A journey may cover at most
+  {max_stems} stems: split bigger ones into more specific journeys (by asset, actor or channel).
   Rejection categories: `tooling`, `test_helper`, `docs_site`, `marketing_site`, `example_app`,
   `telemetry`, and `not_consequence_bearing` (this one needs an `evidence` citation to a file
   you read that shows why). Submissions that leave stems unaccounted are sent back.
@@ -160,7 +163,9 @@ DELIVERY_AGENT = """\
 ## Tools
 You have `list_dir(path)`, `read_file(path, start, end)`, `grep(pattern, path)` and
 `submit_discovery(discovery)`. Explore, then call `submit_discovery` once with the JSON above.
-Budget: about {turns} tool calls. Spend them on tracing the flows, not on re-listing directories."""
+Budget: about {turns} tool calls. Spend them on tracing the flows, not on re-listing directories.
+Older tool results are elided from the conversation to save budget. As you read, state in a
+line what you learned (`file:line symbol → what it does`) so you never need to re-read it."""
 
 DELIVERY_EMIT = """\
 ## Delivery
@@ -304,6 +309,13 @@ def corroboration(j: dict, signals: dict) -> list:
     return found
 
 
+MAX_STEMS_PER_JOURNEY = 15
+# A reason that admits the model did not look is not a reason (live run 3: Supabase
+# `assistant` was rejected with "I did not trace it").
+ADMISSION = re.compile(r"\b(did not|didn'?t|could ?n[o']t|unable to|never|not)\s+"
+                       r"(trace|traced|find|found|read|look|looked|verify|verified|locate|inspect|"
+                       r"investigate|investigated|examine|examined)\b|\buntraced\b|\bunverified\b", re.I)
+
 REJECT_CATS = {"tooling", "test_helper", "docs_site", "marketing_site", "example_app",
                "telemetry", "not_consequence_bearing"}
 
@@ -330,11 +342,12 @@ def account(doc: dict, signals: dict | None, kept: list, root: Path, cache: dict
     The model cannot satisfy this by mapping a whole directory to one journey."""
     sds = sig.seeds(signals or {})
     if not sds:
-        return {"missing": [], "weak": [], "total": 0, "ok": 0}
+        return {"missing": [], "weak": [], "total": 0, "ok": 0, "bad_rejections": [], "overloaded": []}
     cache = cache if cache is not None else {}
     by_id = {j["id"]: j for j in kept}
     cov = {str(c.get("seed")): c for c in (doc.get("seed_coverage") or []) if isinstance(c, dict)}
     missing, weak, total, ok = [], [], 0, 0
+    bad_rej, per_journey = [], {}
     for sd in sds:
         c = cov.get(sd["id"], {})
         done, bad = set(), set()
@@ -349,25 +362,44 @@ def account(doc: dict, signals: dict | None, kept: list, root: Path, cache: dict
                 sv = _stem_vocab(st)
                 if not sv or any(_teq(a_, b_) for a_ in sv for b_ in jv):
                     done.add(st)
+                    per_journey.setdefault(j["id"], set()).add((sd["id"], st))
                 else:
                     bad.add(st)
                     weak.append({"seed": sd["id"], "stem": st, "journey": j["id"]})
         for r in c.get("rejected") or []:
             if not isinstance(r, dict) or r.get("category") not in REJECT_CATS:
                 continue
-            if len(str(r.get("reason") or "").strip()) < 8:
+            reason = str(r.get("reason") or "").strip()
+            rstems = [x for x in (r.get("stems") or []) if x in sd["stems"]]
+            if len(reason) < 8:
+                continue
+            if ADMISSION.search(reason):
+                bad_rej.append({"seed": sd["id"], "stems": rstems, "why": "reason admits it was not read"})
                 continue
             if r["category"] == "not_consequence_bearing":
-                evs = norm_evidence(r.get("evidence"))
-                if not any(check_evidence(e, root, cache)["status"] in ("verified", "file_only") for e in evs):
+                good = [e for e in (check_evidence(e, root, cache) for e in norm_evidence(r.get("evidence")))
+                        if e["status"] in ("verified", "file_only")]
+                if not good:
                     continue
-            done.update(x for x in (r.get("stems") or []) if x in sd["stems"])
+                cite = set()
+                for e in good:
+                    cite.update(sig.norm_tokens(e.get("file") or "") + sig.norm_tokens(e.get("symbol") or ""))
+                cite = {t for t in cite if stem(t) not in GENERIC_STEMS}
+                want = set().union(*[_stem_vocab(x) for x in rstems]) if rstems else set()
+                if want and not any(_teq(a_, b_) for a_ in want for b_ in cite):
+                    bad_rej.append({"seed": sd["id"], "stems": rstems,
+                                    "why": "citation shares no vocabulary with the rejected stems"})
+                    continue
+            done.update(rstems)
         lacking = [x for x in sd["stems"] if x not in done]
         total += len(sd["stems"])
         ok += len(sd["stems"]) - len(lacking)
         if lacking:
             missing.append({"seed": sd["id"], "dir": sd["dir"], "stems": lacking})
-    return {"missing": missing, "weak": weak, "total": total, "ok": ok}
+    over = [{"journey": jid, "stems": len(v)} for jid, v in sorted(per_journey.items())
+            if len(v) > MAX_STEMS_PER_JOURNEY]
+    return {"missing": missing, "weak": weak, "total": total, "ok": ok,
+            "bad_rejections": bad_rej, "overloaded": over}
 
 
 def validate(doc: dict, root: Path, signals: dict | None) -> tuple:
@@ -512,6 +544,12 @@ def render_report(journeys: list, report: dict, repo_name: str, mode: str) -> st
         if acct["weak"]:
             L += ["", "Mapped to a journey that shares no vocabulary with them:", ""]
             L += [f"- {w['seed']} `{w['stem']}` → `{w['journey']}`" for w in acct["weak"]]
+        if acct.get("bad_rejections"):
+            L += ["", "Rejections that did not hold (reason admits it was not read, or citation unrelated):", ""]
+            L += [f"- {b['seed']} {', '.join(b['stems'][:8])}: {b['why']}" for b in acct["bad_rejections"]]
+        if acct.get("overloaded"):
+            L += ["", f"Journeys covering more than {MAX_STEMS_PER_JOURNEY} test names (likely several journeys in one):", ""]
+            L += [f"- `{o['journey']}`: {o['stems']} stems" for o in acct["overloaded"]]
     if report["dropped"]:
         L += ["", "## Dropped", ""]
         L += [f"- `{d['id']}`: {d['reason']}" for d in report["dropped"]]
@@ -607,8 +645,22 @@ def _http_error_hint(code: int, body: str) -> str:
     return f"OpenRouter error {code}: {body[:300]}"
 
 
+def prepare_messages(messages: list, model: str) -> list:
+    """Wire format. For Anthropic models the static prefix (system + task + brief, the
+    biggest and never-changing part) is marked cacheable; other models get plain messages."""
+    if not model.startswith("anthropic/") or len(messages) < 2:
+        return messages
+    first = messages[1]
+    if not isinstance(first.get("content"), str):
+        return messages
+    out = list(messages)
+    out[1] = dict(first, content=[{"type": "text", "text": first["content"],
+                                   "cache_control": {"type": "ephemeral"}}])
+    return out
+
+
 def chat_openrouter(messages: list, model: str, key: str, tools: list) -> dict:
-    payload = json.dumps({"model": model, "messages": messages, "tools": tools,
+    payload = json.dumps({"model": model, "messages": prepare_messages(messages, model), "tools": tools,
                           "temperature": 0.2}).encode()
     req = urllib.request.Request(
         OPENROUTER_URL, data=payload, method="POST",
@@ -633,6 +685,26 @@ def chat_openrouter(messages: list, model: str, key: str, tools: list) -> dict:
 
 
 MAX_GATE_ROUNDS = 2
+KEEP_FULL_RESULTS = 10   # most recent tool results kept verbatim
+ELIDE_BATCH = 6          # elide in batches so the history prefix stays stable between batches
+
+
+def elide_old_results(messages: list, labels: dict) -> int:
+    """Replace old tool results with a one-line stub (the tool_call pairing stays valid).
+    Each request resends the whole conversation, so input tokens grow quadratically with
+    turns; live run 3 spent 2.7M input tokens on MetaMask. Returns how many were elided."""
+    live = [i for i, m in enumerate(messages)
+            if m.get("role") == "tool" and m.get("tool_call_id") in labels
+            and not str(m.get("content", "")).startswith("[elided")]
+    if len(live) <= KEEP_FULL_RESULTS + ELIDE_BATCH:
+        return 0
+    old = live[:-KEEP_FULL_RESULTS]
+    for i in old:
+        m = messages[i]
+        n = len(str(m["content"]))
+        messages[i] = dict(m, content=f"[elided: {labels[m['tool_call_id']]}, {n} chars. "
+                                      f"Re-read it only if you need the exact text.]")
+    return len(old)
 
 
 def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys: int,
@@ -651,14 +723,18 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
         usage["requests"] += 1
         usage["prompt_tokens"] += int(u.get("prompt_tokens") or 0)
         usage["completion_tokens"] += int(u.get("completion_tokens") or 0)
+        usage["cached"] = usage.get("cached", 0) + int(
+            (u.get("prompt_tokens_details") or {}).get("cached_tokens") or 0)
         return r
 
     def done(doc):
         log(f"  tokens: {usage['prompt_tokens']} in / {usage['completion_tokens']} out "
-            f"over {usage['requests']} request(s)")
+            f"over {usage['requests']} request(s)"
+            + (f" ({usage['cached']} cached)" if usage.get("cached") else ""))
         return doc
 
     gate = {"rounds": 0}
+    labels: dict = {}
 
     def bounce(doc):
         """-> message to send back, or None to accept. Judged on the VALIDATED journeys, so
@@ -667,11 +743,12 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             return None
         _, rep = validate(doc, root, signals)
         acct = rep["accounting"]
-        if not acct["missing"] and not acct["weak"]:
+        if not (acct["missing"] or acct["weak"] or acct["bad_rejections"] or acct["overloaded"]):
             return None
         gate["rounds"] += 1
         n = sum(len(m["stems"]) for m in acct["missing"])
-        log(f"  gate: {n} stem(s) missing, {len(acct['weak'])} weak mapping(s) "
+        log(f"  gate: {n} stem(s) missing, {len(acct['weak'])} weak mapping(s), "
+            f"{len(acct['bad_rejections'])} bad rejection(s), {len(acct['overloaded'])} overloaded journey(s) "
             f"(round {gate['rounds']})")
         parts = []
         if acct["missing"]:
@@ -680,6 +757,12 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
         if acct["weak"]:
             parts.append("Mapped to a journey that shares no vocabulary with them: " + "; ".join(
                 f"{w['seed']} {w['stem']}→{w['journey']}" for w in acct["weak"][:15]))
+        if acct["bad_rejections"]:
+            parts.append("Rejections that did not hold: " + "; ".join(
+                f"{b['seed']} {', '.join(b['stems'][:6])} ({b['why']})" for b in acct["bad_rejections"][:10]))
+        if acct["overloaded"]:
+            parts.append(f"Journeys covering more than {MAX_STEMS_PER_JOURNEY} stems, split them: " + "; ".join(
+                f"{o['journey']} ({o['stems']})" for o in acct["overloaded"]))
         if rep["dropped"]:
             parts.append("Journeys dropped for unverifiable citations: " + "; ".join(
                 f"{d['id']} ({d['reason']})" for d in rep["dropped"][:6]))
@@ -696,6 +779,7 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
         {"role": "user", "content": task},
     ]
     for turn in range(turns):
+        elide_old_results(messages, labels)
         resp = chat(messages)
         msg = (resp.get("choices") or [{}])[0].get("message") or {}
         messages.append({k: v for k, v in msg.items() if k in ("role", "content", "tool_calls")} or
@@ -739,6 +823,7 @@ def run_agent(root: Path, brief: str, model: str, key: str | None, max_journeys:
             else:
                 out = f"error: unknown tool {fn}"
             log(f"  [{turn + 1}] {fn} {json.dumps(args)[:90]}")
+            labels[c.get("id", fn)] = f"{fn} {json.dumps(args)[:70]}"
             messages.append({"role": "tool", "tool_call_id": c.get("id", fn), "content": out[:MAX_TOOL_CHARS]})
     messages.append({"role": "user", "content": "Out of budget. Call submit_discovery now with what you have."})
     resp = chat(messages)
@@ -755,7 +840,8 @@ def build_task(repo_name: str, brief: str, max_journeys: int, agent: bool = Fals
                turns: int = MAX_TURNS, out: str = "ce-work", repo_arg: str = ".") -> str:
     delivery = (DELIVERY_AGENT.format(turns=turns) if agent
                 else DELIVERY_EMIT.format(out=out, repo_arg=repo_arg))
-    return TASK_TEMPLATE.format(repo=repo_name, max_journeys=max_journeys, delivery=delivery, brief=brief)
+    return TASK_TEMPLATE.format(repo=repo_name, max_journeys=max_journeys, delivery=delivery, brief=brief,
+                                max_stems=MAX_STEMS_PER_JOURNEY)
 
 
 # --------------------------------------------------------------------------
@@ -784,7 +870,7 @@ def main(argv=None) -> int:
     ap.add_argument("--ingest", metavar="DISCOVERY_JSON",
                     help="validate a discovery.json and write journeys.yaml")
     ap.add_argument("--model", default=os.environ.get("CE_EXPLORER_MODEL", DEFAULT_MODEL))
-    ap.add_argument("--max-journeys", type=int, default=20)
+    ap.add_argument("--max-journeys", type=int, default=30)
     ap.add_argument("--turns", type=int, default=MAX_TURNS)
     args = ap.parse_args(argv)
 

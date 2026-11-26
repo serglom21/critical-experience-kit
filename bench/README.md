@@ -81,3 +81,19 @@ support/example dirs and setup stems are excluded from seeds mechanically; every
 with a fixed category (`not_consequence_bearing` needs a verifiable citation); the brief shows
 all stems (it capped at 14 before), and the gate runs on validator output, so a mapping to a
 journey the validator drops no longer counts. Not yet measured live.
+
+## Live run 3 (gate v2) and the follow-up
+
+| Repo | Recall | Precision | Proposals | Wall | Tokens in | Cost |
+|---|---|---|---|---|---|---|
+| supabase | 0.857 | 0.833 | 18 | 222 s | 0.70 M | $1.715 |
+| metamask | 0.923 | 0.909 | 22 | 638 s | 2.68 M | $6.393 |
+
+Gate v2 matched the in-session recall on both repos (tuned on these two repos, so this shows the
+mechanism works, not that it generalises). Weak spots seen: rejections cited unrelated files
+and one said "I did not trace it"; `send_funds` held 41 test names; input tokens grew
+quadratically with turns. Follow-up (gate v3): a rejection's citation must share vocabulary
+with the rejected stems, reasons that admit the code was not read do not count, journeys over
+15 stems are bounced as overloaded, old tool results are elided from the conversation (keep 10,
+batch of 6), and the static prompt prefix is marked cacheable for `anthropic/*` models.
+Not yet measured live; caching in particular is untested against OpenRouter.
