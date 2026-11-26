@@ -3,7 +3,16 @@
 Supabase and MetaMask were used to tune the explorer and its gate, so their scores show the
 mechanism works, not that it generalises. This benchmark measures generalisation.
 
-## Protocol
+## Mode: post-run review (chosen 26 Nov 2026)
+
+Labels were not written in advance. Instead each repo is run once, then a human judges every
+proposed journey with `bench/review.py` (critical / minor / wrong, and whether its steps are
+right) and lists any critical journey they notice is missing. This gives precision and step
+quality honestly. It does not give true recall: the reviewer sees the output first, so
+`found_of_known_critical` is an upper bound. The pre-labelled protocol below is kept for a
+later, stricter round; the ground-truth stubs stay empty.
+
+## Protocol (pre-labelled; not used in this round)
 1. **Freeze the kit.** All blind runs use kit commit `5510825` (discovery-v2). No changes to
    `gap/`, `bench/score.py` or the prompts until every blind repo is scored.
 2. **Pin the repos.** Commits are listed in each `bench/ground_truth/blind/<repo>.yaml`.
