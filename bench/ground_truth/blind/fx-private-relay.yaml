@@ -1,0 +1,21 @@
+# BLIND ground truth for mozilla/fx-private-relay @ fc13199d896fa556ee6504acb775f7e9bbc8823e
+# Language: Python (Django). Account: Mozilla ($25k+ customer).
+# What it does: Email/phone masks, forwarding, premium subscription. Has a Playwright e2e suite.
+#
+# Write this BEFORE running `ce explore` on this repo, and do not edit it after the run.
+# Whoever writes it must not have read the explorer's output or the gate code changes.
+#
+# Per journey:
+#   id:      kebab-case business name ("checkout", not "PaymentController")
+#   tier:    e2e   = the repo's own e2e/integration suite exercises it
+#            code  = not in e2e, but a consequence-bearing flow you can point to in code
+#   anchors: 1-3 repo-relative path PREFIXES (dir or file) where the flow lives. Primary match key.
+#   aliases: 1-4 distinctive tokens. Keep them specific; generic words ("user", "data") inflate scores.
+# Aim for 10-15 journeys: the ones a business owner would page someone for.
+repo: fx-private-relay
+source: https://github.com/mozilla/fx-private-relay
+commit: fc13199d896fa556ee6504acb775f7e9bbc8823e
+labeled_by: ""        # your name
+labeled_at: ""        # date, before the run
+journeys: []
+#  - {id: example-journey, tier: code, aliases: [example], anchors: [path/to/dir]}

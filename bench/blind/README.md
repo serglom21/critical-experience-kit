@@ -1,0 +1,30 @@
+# Blind benchmark
+
+Supabase and MetaMask were used to tune the explorer and its gate, so their scores show the
+mechanism works, not that it generalises. This benchmark measures generalisation.
+
+## Protocol
+1. **Freeze the kit.** All blind runs use kit commit `5510825` (discovery-v2). No changes to
+   `gap/`, `bench/score.py` or the prompts until every blind repo is scored.
+2. **Pin the repos.** Commits are listed in each `bench/ground_truth/blind/<repo>.yaml`.
+3. **Label first.** Fill each ground-truth file before running the explorer on that repo.
+   The labeller must not have seen explorer output for it. Commit the labels (with
+   `labeled_at`) before the run so the order is auditable.
+4. **Run once, defaults only.** `ce explore --mode openrouter` with default turns and token
+   ceiling. One run per repo; a crash may be re-run, a bad score may not.
+5. **Score and record.** `bench/score.py --truth bench/ground_truth/blind/<repo>.yaml ...`.
+   Record results here even if they are bad. Fixes come after, and are re-measured on a
+   fresh repo, not on these.
+
+## Repos
+| Repo | Lang | Sentry account | Notes |
+|---|---|---|---|
+| supabase/auth | Go | Supabase, $25k+ | Same company as a tuning repo, different codebase and language |
+| mozilla/fx-private-relay | Python | Mozilla, $25k+ | Playwright e2e, subscriptions |
+| indico/indico | Python | CERN, $25k+ | CERN also self-hosts Sentry; paid org may not cover Indico |
+| chatwoot/chatwoot | Ruby | not $25k | Ruby coverage |
+| killbill/killbill | Java | Prospect | No UI: tests discovery with almost no e2e seeds |
+| cli/cli | Go | Microsoft - GitHub, $25k+ | Optional, CLI-shaped |
+
+## Results
+(fill in after runs)

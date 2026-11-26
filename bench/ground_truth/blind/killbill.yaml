@@ -1,0 +1,21 @@
+# BLIND ground truth for killbill/killbill @ 5c549cbfbb0a961cca8c63b2a6c35fcc974cb2e9
+# Language: Java. Account: Kill Bill is a Prospect, not a $25k account.
+# What it does: Billing engine, no UI: accounts, subscriptions, invoicing, payments. Expect few/no e2e seeds.
+#
+# Write this BEFORE running `ce explore` on this repo, and do not edit it after the run.
+# Whoever writes it must not have read the explorer's output or the gate code changes.
+#
+# Per journey:
+#   id:      kebab-case business name ("checkout", not "PaymentController")
+#   tier:    e2e   = the repo's own e2e/integration suite exercises it
+#            code  = not in e2e, but a consequence-bearing flow you can point to in code
+#   anchors: 1-3 repo-relative path PREFIXES (dir or file) where the flow lives. Primary match key.
+#   aliases: 1-4 distinctive tokens. Keep them specific; generic words ("user", "data") inflate scores.
+# Aim for 10-15 journeys: the ones a business owner would page someone for.
+repo: killbill
+source: https://github.com/killbill/killbill
+commit: 5c549cbfbb0a961cca8c63b2a6c35fcc974cb2e9
+labeled_by: ""        # your name
+labeled_at: ""        # date, before the run
+journeys: []
+#  - {id: example-journey, tier: code, aliases: [example], anchors: [path/to/dir]}

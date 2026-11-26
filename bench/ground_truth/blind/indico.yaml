@@ -1,0 +1,21 @@
+# BLIND ground truth for indico/indico @ bc4c33165ff71644ced24aa1444c3e83a153453d
+# Language: Python (Flask). Account: CERN ($25k+ customer).
+# What it does: Event management: registration, payments, abstracts, timetable, room booking.
+#
+# Write this BEFORE running `ce explore` on this repo, and do not edit it after the run.
+# Whoever writes it must not have read the explorer's output or the gate code changes.
+#
+# Per journey:
+#   id:      kebab-case business name ("checkout", not "PaymentController")
+#   tier:    e2e   = the repo's own e2e/integration suite exercises it
+#            code  = not in e2e, but a consequence-bearing flow you can point to in code
+#   anchors: 1-3 repo-relative path PREFIXES (dir or file) where the flow lives. Primary match key.
+#   aliases: 1-4 distinctive tokens. Keep them specific; generic words ("user", "data") inflate scores.
+# Aim for 10-15 journeys: the ones a business owner would page someone for.
+repo: indico
+source: https://github.com/indico/indico
+commit: bc4c33165ff71644ced24aa1444c3e83a153453d
+labeled_by: ""        # your name
+labeled_at: ""        # date, before the run
+journeys: []
+#  - {id: example-journey, tier: code, aliases: [example], anchors: [path/to/dir]}
